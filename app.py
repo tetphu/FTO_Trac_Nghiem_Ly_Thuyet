@@ -51,7 +51,7 @@ def luu_ket_qua(db, user, diem):
 def main():
     st.set_page_config(page_title="GCPD System", page_icon="🚓", layout="centered")
 
-    # CSS GIAO DIỆN GCPD NỀN TRẮNG (ĐÃ RÀ SOÁT LỖI)
+    # CSS GIAO DIỆN GCPD NỀN TRẮNG
     st.markdown("""
         <style>
         .block-container { padding-top: 1rem; padding-bottom: 0rem; max-width: 800px; }
@@ -173,18 +173,34 @@ def main():
         ds = st.session_state['ds_cau_hoi']
         idx = st.session_state['chi_so']
 
-        # KẾT THÚC
+        # --- [MỚI] MÀN HÌNH HOÀN THÀNH ---
         if idx >= len(ds):
             st.markdown(header_html, unsafe_allow_html=True)
             st.balloons()
-            st.markdown(f"<h2 style='text-align:center'>KẾT QUẢ: {st.session_state['diem_so']} / {len(ds)}</h2>", unsafe_allow_html=True)
-            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
-            time.sleep(3)
-            st.session_state['vai_tro'] = None
-            st.rerun()
+            
+            # Thông báo hoàn thành
+            st.markdown("""
+                <div style="text-align: center; color: #002147;">
+                    <h2 style="color: #002147;">✅ NHIỆM VỤ HOÀN TẤT</h2>
+                    <p style="font-size: 16px; font-weight: bold;">
+                        Chúc mừng Sĩ Quan đã thi xong phần trắc nghiệm lý thuyết.<br>
+                        Kết quả sẽ được thông báo tới Sĩ Quan ngay sau khi FTO Manager duyệt.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Nút OK để lưu và thoát
+            if st.button("XÁC NHẬN (OK)"):
+                with st.spinner("Đang lưu hồ sơ..."):
+                    luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
+                    time.sleep(2)
+                    st.session_state['vai_tro'] = None
+                    st.rerun()
+            
             st.markdown('</div></div>', unsafe_allow_html=True)
             return
 
+        # HIỂN THỊ CÂU HỎI
         cau = ds[idx]
         while len(cau) < 7: cau.append("")
 
@@ -197,7 +213,6 @@ def main():
             con_lai = int(st.session_state['thoi_gian_het'] - time.time())
             if con_lai <= 0: st.session_state['da_nop_cau'] = True; st.rerun()
 
-            # SỬA LỖI SYNTAX Ở ĐÂY: Đã đóng ngoặc đầy đủ
             st.progress(max(0.0, min(1.0, con_lai / THOI_GIAN_MOI_CAU)))
             st.caption(f"THỜI GIAN: {con_lai}s")
 
