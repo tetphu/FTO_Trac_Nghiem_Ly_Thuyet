@@ -4,7 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 
 # --- CẤU HÌNH ---
-THOI_GIAN_MOI_CAU = 30  # Thời gian (giây) cho mỗi câu
+THOI_GIAN_MOI_CAU = 30 
 
 # --- KẾT NỐI GOOGLE SHEET ---
 def ket_noi_csdl():
@@ -20,7 +20,7 @@ def ket_noi_csdl():
         st.error(f"Lỗi kết nối: {str(e)}")
         return None
 
-# --- CÁC HÀM XỬ LÝ DỮ LIỆU ---
+# --- HÀM XỬ LÝ ---
 def kiem_tra_dang_nhap(db, user, pwd):
     try:
         ws = db.worksheet("HocVien")
@@ -29,14 +29,9 @@ def kiem_tra_dang_nhap(db, user, pwd):
             if len(row) < 4: continue
             if str(row[0]).strip() == str(user).strip() and str(row[1]).strip() == str(pwd).strip():
                 status = str(row[4]).strip() if len(row) > 4 else ""
-                
-                # --- KIỂM TRA TRẠNG THÁI ---
                 if status == 'DaThi': return "DA_KHOA", None
                 if status == 'DangThi': return "VI_PHAM", None
-                
-                role = str(row[2]).strip()
-                name = str(row[3]).strip()
-                return role, name
+                return str(row[2]).strip(), str(row[3]).strip()
     except: pass
     return None, None
 
@@ -63,23 +58,82 @@ def lay_giao_trinh(db):
         return ws.get_all_records()
     except: return []
 
-# --- GIAO DIỆN CHÍNH ---
-def main():
-    st.set_page_config(page_title="FTO System", page_icon="🚓", layout="wide")
-
-    # CSS STYLE
+# --- HÀM CSS (ĐỂ RIÊNG CHO GỌN) ---
+def inject_css():
     st.markdown("""
         <style>
         .block-container { padding-top: 2rem; padding-bottom: 5rem; }
         header, footer { visibility: hidden; }
         .stApp { background-color: #ffffff; }
-        
         .gcpd-title {
             font-family: 'Arial Black', sans-serif; color: #002147; 
             font-size: 35px; text-transform: uppercase;
             margin-top: 10px; line-height: 1.2; font-weight: 900;
         }
-        
         [data-testid="stForm"] {
             border: 3px solid #002147; border-radius: 12px; padding: 20px;
-            background-image: url("
+            background-image: url("https://raw.githubusercontent.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/refs/heads/main/nen.png");
+            background-size: cover; background-position: center;
+            background-color: rgba(255, 255, 255, 0.9); background-blend-mode: overlay;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
+            border: 2px solid #002147 !important; border-radius: 4px !important;
+            font-weight: bold; color: #000 !important;
+        }
+        .stButton button {
+            background-color: #002147 !important; color: #FFD700 !important;
+            font-weight: bold !important; width: 100%; padding: 10px;
+        }
+        .lesson-card {
+            background-color: #f8f9fa; border-left: 5px solid #002147;
+            padding: 20px; margin-bottom: 20px; border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .lesson-title { color: #002147; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .lesson-content { font-size: 16px; line-height: 1.6; color: #333; white-space: pre-wrap; }
+        </style>
+    """, unsafe_allow_html=True)
+
+# --- CHƯƠNG TRÌNH CHÍNH ---
+def main():
+    st.set_page_config(page_title="FTO System", page_icon="🚓", layout="wide")
+    inject_css() # Gọi hàm CSS ở đây
+
+    if 'vai_tro' not in st.session_state: 
+        st.session_state.update(vai_tro=None, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False, thoi_gian_het=None, lua_chon=None)
+
+    db = ket_noi_csdl()
+    if not db: st.stop()
+
+    # 1. ĐĂNG NHẬP
+    if st.session_state['vai_tro'] is None:
+        c1, c2, c3 = st.columns([1,2,1])
+        with c2:
+            with st.form("login"):
+                wc1, wc2 = st.columns([1, 2.5])
+                with wc1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=150)
+                with wc2: st.markdown('<div class="gcpd-title">GACHA CITY<BR>POLICE DEPT<BR>ACADEMY</div>', unsafe_allow_html=True)
+                st.divider()
+                st.markdown("### ▼ ĐĂNG NHẬP HỆ THỐNG")
+                u = st.text_input("SỐ HIỆU (Momo)")
+                p = st.text_input("MÃ BẢO MẬT", type="password")
+                
+                if st.form_submit_button("XÁC THỰC DANH TÍNH"):
+                    vt, ten = kiem_tra_dang_nhap(db, u, p)
+                    if vt == "DA_KHOA": st.error("⛔ ĐÃ HOÀN THÀNH BÀI THI.")
+                    elif vt == "VI_PHAM": 
+                        st.error("🚨 CẢNH BÁO VI PHẠM!")
+                        st.warning("Hồ sơ bị khóa do thoát khi đang thi.")
+                    elif vt:
+                        st.session_state.update(vai_tro=vt, user=u, ho_ten=ten)
+                        st.rerun()
+                    else: st.error("❌ SAI THÔNG TIN")
+
+    # 2. ĐÃ ĐĂNG NHẬP
+    else:
+        with st.sidebar:
+            st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
+            st.markdown(f"### 👮 Sĩ quan: {st.session_state['ho_ten']}")
+            st.code(f"Vai trò: {st.session_state['vai_tro']}") 
+            if st.session_state['bat_dau']:
