@@ -133,21 +133,47 @@ def main():
                     st.error(f"Lỗi: {e}")
 
     # --- 3. GIAO DIỆN HỌC VIÊN ---
+    # ==========================================
+    # 3. GIAO DIỆN HỌC VIÊN (ĐÃ SỬA LỖI TRẮNG MÀN HÌNH)
+    # ==========================================
     elif st.session_state['vai_tro'] == 'hocvien':
-        if not st.session_state['ds_cau_hoi']:
-            st.session_state['ds_cau_hoi'] = lay_du_lieu_cau_hoi(db)
+        # Tải dữ liệu
+        if not st.session_state['danh_sach_cau_hoi']:
+            with st.spinner('Đang tải câu hỏi...'):
+                try:
+                    st.session_state['danh_sach_cau_hoi'] = lay_du_lieu_cau_hoi(db)
+                except Exception as e:
+                    st.error(f"Lỗi tải dữ liệu: {e}")
+                    st.stop()
         
-        ds = st.session_state['ds_cau_hoi']
-        idx = st.session_state['chi_so']
+        ds = st.session_state['danh_sach_cau_hoi']
+        
+        # --- [QUAN TRỌNG] KIỂM TRA DỮ LIỆU RỖNG HOẶC SAI CỘT ---
+        if not ds:
+            st.warning("⚠️ Chưa có câu hỏi nào trong hệ thống!")
+            st.stop()
+            
+        # Kiểm tra thử câu đầu tiên xem có đọc được cột 'Câu Hỏi' không
+        mau_thu = ds[0]
+        if 'Câu Hỏi' not in mau_thu:
+            st.error("❌ LỖI TÊN CỘT KHÔNG KHỚP!")
+            st.write("Code đang tìm cột tên là: **'Câu Hỏi'**")
+            st.write("Nhưng trong Google Sheet của bạn đang là các cột sau:")
+            st.json(list(mau_thu.keys())) # Hiện danh sách cột thực tế
+            st.info("👉 Hãy vào Google Sheet sửa lại dòng đầu tiên cho khớp y hệt danh sách code yêu cầu (Copy dòng dưới dán vào Sheet):")
+            st.code("Câu Hỏi | Đáp Án A | Đáp Án B | Đáp Án C | Đáp Án D | Đáp Án Đúng | Giải Thích")
+            st.stop()
+        # -------------------------------------------------------
 
-        st.sidebar.write(f"Thí sinh: **{st.session_state['name']}**")
-        st.sidebar.write(f"Điểm: **{st.session_state['diem_so']}**")
+        idx = st.session_state['chi_so_cau_hien_tai']
+        st.sidebar.markdown(f"👋 Xin chào: **{st.session_state['ho_ten']}**")
+        st.sidebar.metric("Điểm số", st.session_state['diem_so'])
 
-        # KẾT THÚC
+        # KẾT THÚC BÀI THI
         if idx >= len(ds):
-            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
+            luu_ket_qua(db, st.session_state['ten_dang_nhap'], st.session_state['diem_so'])
             st.balloons()
-            st.success(f"Hoàn thành! Điểm: {st.session_state['diem_so']}/{len(ds)}")
+            st.success(f"🎉 HOÀN THÀNH! Kết quả: {st.session_state['diem_so']}/{len(ds)}")
             st.info("Đang đăng xuất...")
             time.sleep(3)
             st.session_state['vai_tro'] = None
@@ -156,45 +182,66 @@ def main():
 
         # HIỂN THỊ CÂU HỎI
         cau = ds[idx]
-        # Code mới: Gọi đúng tên cột Tiếng Việt
-        noi_dung = cau.get('Câu Hỏi', '')
+        
+        # Lấy dữ liệu an toàn (tránh lỗi key error)
+        noi_dung = cau.get('Câu Hỏi', 'Lỗi hiển thị câu hỏi')
         da_a = cau.get('Đáp Án A', '')
         da_b = cau.get('Đáp Án B', '')
         da_c = cau.get('Đáp Án C', '')
         da_d = cau.get('Đáp Án D', '')
-        # Lưu ý: Nếu cột giải thích bạn đặt tên khác thì sửa ở đây
         loi_giai = cau.get('Giải Thích', 'Không có giải thích')
 
-        st.subheader(f"Câu {idx+1}:")
+        st.subheader(f"Câu hỏi {idx+1}:")
         st.info(noi_dung)
 
-        # LOGIC THI
-        if not st.session_state['da_nop']:
-            if st.session_state['thoi_gian_het'] is None:
-                st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
+        # LOGIC LÀM BÀI
+        if not st.session_state['da_nop_cau_nay']:
+            if st.session_state['thoi_gian_ket_thuc_cau'] is None:
+                st.session_state['thoi_gian_ket_thuc_cau'] = time.time() + THOI_GIAN_MOI_CAU
             
-            con_lai = st.session_state['thoi_gian_het'] - time.time()
+            con_lai = st.session_state['thoi_gian_ket_thuc_cau'] - time.time()
+            
             if con_lai <= 0:
-                st.session_state['da_nop'] = True
-                st.session_state['lua_chon'] = None
+                st.session_state['da_nop_cau_nay'] = True
+                st.session_state['lua_chon_cua_hoc_vien'] = None
                 st.rerun()
             
             st.progress(max(0.0, min(1.0, con_lai/THOI_GIAN_MOI_CAU)))
             
-            with st.form(f"f_{idx}"):
-                opts = [f"A. {da_a}", f"B. {da_b}", f"C. {da_c}"]
-                if str(da_d).strip(): opts.append(f"D. {da_d}")
+            with st.form(f"form_thi_{idx}"):
+                lua_chon = [f"A. {da_a}", f"B. {da_b}", f"C. {da_c}"]
+                if str(da_d).strip(): lua_chon.append(f"D. {da_d}")
                 
-                chon = st.radio("Chọn đáp án:", opts, index=None)
+                chon = st.radio("Chọn đáp án:", lua_chon, index=None)
                 if st.form_submit_button("Trả Lời"):
                     if chon:
-                        st.session_state['lua_chon'] = chon.split(".")[0]
-                        st.session_state['da_nop'] = True
+                        st.session_state['lua_chon_cua_hoc_vien'] = chon.split(".")[0]
+                        st.session_state['da_nop_cau_nay'] = True
                         st.rerun()
                     else:
-                        st.warning("Vui lòng chọn đáp án!")
+                        st.warning("Bạn chưa chọn đáp án!")
             time.sleep(1)
             st.rerun()
+        
+        else:
+            # XEM KẾT QUẢ
+            nguoi_chon = st.session_state['lua_chon_cua_hoc_vien']
+            dap_an_dung = str(cau.get('Đáp Án Đúng', '')).strip().upper()
+            
+            if nguoi_chon == dap_an_dung:
+                st.success(f"CHÍNH XÁC!\n\n💡 {loi_giai}")
+                dung = True
+            else:
+                st.error(f"SAI RỒI! Đáp án là {dap_an_dung}\n\n💡 {loi_giai}")
+                dung = False
+            
+            if st.button("Câu Tiếp Theo"):
+                if dung: st.session_state['diem_so'] += 1
+                st.session_state['chi_so_cau_hien_tai'] += 1
+                st.session_state['da_nop_cau_nay'] = False
+                st.session_state['thoi_gian_ket_thuc_cau'] = None
+                st.session_state['lua_chon_cua_hoc_vien'] = None
+                st.rerun()
         
         else:
             # XEM KẾT QUẢ
