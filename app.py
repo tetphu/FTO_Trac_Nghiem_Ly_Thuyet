@@ -30,7 +30,11 @@ def kiem_tra_dang_nhap(db, user, pwd):
             if str(row[0]).strip() == str(user).strip() and str(row[1]).strip() == str(pwd).strip():
                 status = str(row[4]).strip() if len(row) > 4 else ""
                 if status == 'DaThi': return "DA_KHOA", None
-                return str(row[2]).strip(), str(row[3]).strip()
+                
+                # Trả về vai trò gốc (GiangVien hoặc hocvien)
+                role = str(row[2]).strip()
+                name = str(row[3]).strip()
+                return role, name
     except: pass
     return None, None
 
@@ -51,9 +55,9 @@ def lay_giao_trinh(db):
 
 # --- GIAO DIỆN CHÍNH ---
 def main():
-    st.set_page_config(page_title="FTO Academy", page_icon="👮", layout="wide") # Layout wide để đọc sách dễ hơn
+    st.set_page_config(page_title="FTO System", page_icon="🚓", layout="wide")
 
-    # CSS GIỮ NGUYÊN STYLE GỐC CỦA BẠN
+    # CSS GIỮ NGUYÊN
     st.markdown("""
         <style>
         .block-container { padding-top: 2rem; padding-bottom: 5rem; }
@@ -77,7 +81,7 @@ def main():
         }
 
         /* INPUT & BUTTON */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
             border: 2px solid #002147 !important; border-radius: 4px !important;
             font-weight: bold; color: #000 !important;
         }
@@ -104,10 +108,10 @@ def main():
     if not db: st.stop()
 
     # ==========================================
-    # 1. MÀN HÌNH ĐĂNG NHẬP (Chưa Login)
+    # 1. MÀN HÌNH ĐĂNG NHẬP
     # ==========================================
     if st.session_state['vai_tro'] is None:
-        c1, c2, c3 = st.columns([1,2,1]) # Căn giữa form login
+        c1, c2, c3 = st.columns([1,2,1])
         with c2:
             with st.form("login"):
                 wc1, wc2 = st.columns([1, 2.5])
@@ -115,11 +119,11 @@ def main():
                 with wc2: st.markdown('<div class="gcpd-title">GACHA CITY<BR>POLICE DEPT<BR>ACADEMY</div>', unsafe_allow_html=True)
                 st.divider()
                 
-                st.markdown("### ▼ ĐĂNG NHẬP CỔNG ĐÀO TẠO")
+                st.markdown("### ▼ ĐĂNG NHẬP HỆ THỐNG")
                 u = st.text_input("SỐ HIỆU (Momo)")
                 p = st.text_input("MÃ BẢO MẬT", type="password")
                 
-                if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
+                if st.form_submit_button("XÁC THỰC DANH TÍNH"):
                     vt, ten = kiem_tra_dang_nhap(db, u, p)
                     if vt == "DA_KHOA": st.error("⛔ HỒ SƠ ĐÃ KHÓA")
                     elif vt:
@@ -128,17 +132,26 @@ def main():
                     else: st.error("❌ SAI THÔNG TIN")
 
     # ==========================================
-    # 2. ĐÃ ĐĂNG NHẬP -> HIỆN MENU CHÍNH
+    # 2. ĐÃ ĐĂNG NHẬP -> XỬ LÝ PHÂN QUYỀN MENU
     # ==========================================
     else:
-        # --- SIDEBAR (THANH MENU BÊN TRÁI) ---
+        # --- SIDEBAR ---
         with st.sidebar:
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
             st.markdown(f"### 👮 Sĩ quan: {st.session_state['ho_ten']}")
+            st.code(f"Vai trò: {st.session_state['vai_tro']}") # Hiện vai trò để check
             st.divider()
             
-            # MENU LỰA CHỌN
-            menu = st.radio("CHỨC NĂNG", ["📖 GIÁO TRÌNH FTO", "📝 SÁT HẠCH LÝ THUYẾT"], index=0)
+            # --- LOGIC PHÂN QUYỀN MENU ---
+            # Mặc định ai cũng thấy phần thi
+            ds_chuc_nang = ["📝 SÁT HẠCH LÝ THUYẾT"]
+            
+            # Chỉ Giảng Viên mới thấy Giáo trình và Quản lý câu hỏi
+            if st.session_state['vai_tro'] == 'GiangVien':
+                ds_chuc_nang.insert(0, "📖 GIÁO TRÌNH FTO (GV)")
+                ds_chuc_nang.append("⚙️ QUẢN LÝ CÂU HỎI (GV)")
+            
+            menu = st.radio("MENU CHỨC NĂNG", ds_chuc_nang)
             
             st.write("")
             st.write("")
@@ -147,15 +160,15 @@ def main():
                 st.rerun()
 
         # ==========================================
-        # CHỨC NĂNG 1: ĐỌC GIÁO TRÌNH
+        # CHỨC NĂNG: ĐỌC GIÁO TRÌNH (CHỈ GV)
         # ==========================================
-        if menu == "📖 GIÁO TRÌNH FTO":
-            st.title("📚 THƯ VIỆN GIÁO TRÌNH ĐIỆN TỬ")
-            st.info("Học viên vui lòng đọc kỹ các quy tắc trước khi vào phần thi.")
+        if "GIÁO TRÌNH FTO" in menu:
+            st.title("📚 TÀI LIỆU NỘI BỘ GIẢNG VIÊN")
+            st.info("Khu vực chỉ dành cho Giảng viên FTO.")
             
             ds_bai = lay_giao_trinh(db)
             if not ds_bai:
-                st.warning("Chưa có dữ liệu bài giảng trong Google Sheet (Tab 'GiaoTrinh').")
+                st.warning("Chưa có dữ liệu bài giảng trong Google Sheet.")
             else:
                 for bai in ds_bai:
                     with st.container():
@@ -165,57 +178,64 @@ def main():
                             <div class="lesson-content">{bai['NoiDung']}</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        
-                        # Hiện ảnh nếu có link
                         if str(bai['HinhAnh']).strip().startswith("http"):
-                            st.image(bai['HinhAnh'], caption="Hình ảnh minh họa", use_column_width=True)
+                            st.image(bai['HinhAnh'], caption="Minh họa", use_column_width=True)
                         st.divider()
 
         # ==========================================
-        # CHỨC NĂNG 2: THI TRẮC NGHIỆM (Code cũ)
+        # CHỨC NĂNG: QUẢN LÝ CÂU HỎI (CHỈ GV)
         # ==========================================
-        elif menu == "📝 SÁT HẠCH LÝ THUYẾT":
-            # (Phần này giữ nguyên logic thi của bạn, chỉ bọc vào trong menu này)
-            
-            # --- MÀN HÌNH CHỜ THI ---
+        elif "QUẢN LÝ CÂU HỎI" in menu:
+            st.title("⚙️ CẬP NHẬT NGÂN HÀNG CÂU HỎI")
+            with st.form("add_question"):
+                q = st.text_input("NỘI DUNG CÂU HỎI")
+                c1, c2 = st.columns(2)
+                a, b = c1.text_input("ĐÁP ÁN A"), c1.text_input("ĐÁP ÁN B")
+                c, d = c2.text_input("ĐÁP ÁN C"), c2.text_input("ĐÁP ÁN D")
+                dung = st.selectbox("ĐÁP ÁN ĐÚNG", ["A", "B", "C", "D"])
+                gt = st.text_area("GIẢI THÍCH (Hiện khi chọn sai)")
+                if st.form_submit_button("LƯU VÀO DATABASE"):
+                    try:
+                        db.worksheet("CauHoi").append_row([q, a, b, c, d, dung, gt])
+                        st.success("ĐÃ THÊM THÀNH CÔNG!")
+                    except Exception as e: st.error(str(e))
+
+        # ==========================================
+        # CHỨC NĂNG: THI SÁT HẠCH (AI CŨNG THẤY)
+        # ==========================================
+        elif "SÁT HẠCH LÝ THUYẾT" in menu:
+            # LOGIC THI (Giữ nguyên)
             if not st.session_state['bat_dau']:
                 c1, c2, c3 = st.columns([1,2,1])
                 with c2:
                     st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
                     st.markdown("### BÀI THI SÁT HẠCH LÝ THUYẾT")
-                    st.warning("⚠️ LƯU Ý: Một khi đã bấm 'BẮT ĐẦU', thời gian sẽ tính ngay lập tức.")
-                    if st.button("BẮT ĐẦU LÀM BÀI NGAY", type="primary"):
+                    st.warning("⚠️ LƯU Ý: Thời gian sẽ tính ngay khi bấm nút.")
+                    if st.button("BẮT ĐẦU LÀM BÀI", type="primary"):
                         st.session_state['bat_dau'] = True
                         st.rerun()
             
             else:
-                # --- LOGIC THI ---
-                # 1. Tải câu hỏi nếu chưa có
                 if not st.session_state['ds_cau_hoi']:
                     raw = db.worksheet("CauHoi").get_all_values()
                     if len(raw) > 1: st.session_state['ds_cau_hoi'] = raw[1:]
-                    else: st.error("Lỗi dữ liệu câu hỏi"); st.stop()
+                    else: st.error("Lỗi dữ liệu"); st.stop()
 
                 ds = st.session_state['ds_cau_hoi']
                 idx = st.session_state['chi_so']
 
-                # 2. Xử lý kết thúc
                 if idx >= len(ds):
                     st.balloons()
-                    st.success(f"🎉 CHÚC MỪNG! BẠN ĐÃ HOÀN THÀNH BÀI THI.")
-                    st.metric("KẾT QUẢ CUỐI CÙNG", f"{st.session_state['diem_so']} / {len(ds)} Điểm")
-                    
-                    if st.button("NỘP HỒ SƠ VÀ THOÁT"):
+                    st.success(f"🎉 HOÀN THÀNH! KẾT QUẢ: {st.session_state['diem_so']} / {len(ds)}")
+                    if st.button("NỘP HỒ SƠ"):
                         luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
                         for key in list(st.session_state.keys()): del st.session_state[key]
                         st.rerun()
                     return
 
-                # 3. Hiển thị câu hỏi
                 cau = ds[idx]
                 while len(cau) < 7: cau.append("")
 
-                # Xử lý thời gian
                 if not st.session_state['da_nop_cau']:
                     if st.session_state['thoi_gian_het'] is None: 
                         st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -232,31 +252,25 @@ def main():
                         opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
                         if str(cau[4]).strip(): opts.append(f"D. {cau[4]}")
                         chon = st.radio("", opts, index=None)
-                        
                         if st.form_submit_button("CHỐT ĐÁP ÁN"):
                             if chon:
                                 st.session_state['lua_chon'] = chon.split(".")[0]
                                 st.session_state['da_nop_cau'] = True
                                 st.rerun()
-                            else: st.warning("Vui lòng chọn đáp án!")
+                            else: st.warning("Chọn đáp án đi Sĩ quan!")
                     time.sleep(1); st.rerun()
                 
                 else:
-                    # Hiển thị kết quả từng câu
-                    st.info("KẾT QUẢ CÂU VỪA RỒI:")
                     nguoi_chon = st.session_state['lua_chon']
                     dap_an_dung = str(cau[5]).strip().upper()
                     
                     if nguoi_chon == dap_an_dung:
-                        st.success(f"✅ CHÍNH XÁC! (Đáp án {dap_an_dung})")
-                        msg = "Giỏi lắm đồng chí!"
+                        st.success(f"✅ CHÍNH XÁC!")
                     else:
-                        st.error(f"❌ SAI RỒI! (Bạn chọn {nguoi_chon} - Đáp án đúng là {dap_an_dung})")
-                        msg = "Hãy chú ý hơn!"
-
-                    st.markdown(f"> *Giải thích: {cau[6]}*")
+                        st.error(f"❌ SAI RỒI! (Đáp án đúng: {dap_an_dung})")
+                    st.info(f"💡 {cau[6]}")
                     
-                    if st.button(f"TIẾP TỤC ({msg})"):
+                    if st.button("CÂU TIẾP THEO"):
                         if nguoi_chon == dap_an_dung: st.session_state['diem_so'] += 1
                         st.session_state['chi_so'] += 1
                         st.session_state['da_nop_cau'] = False
