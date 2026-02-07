@@ -1,6 +1,7 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd  # <--- THƯ VIỆN MỚI ĐỂ XỬ LÝ BẢNG
 import time
 
 # --- 1. CẤU HÌNH ---
@@ -136,6 +137,7 @@ def main():
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
             st.markdown(f"### 👮 Sĩ quan: {st.session_state['ho_ten']}")
             st.code(f"Vai trò: {st.session_state['vai_tro']}") 
+            
             if st.session_state['bat_dau']:
                 st.divider()
                 st.metric("🏆 ĐIỂM", f"{st.session_state['diem_so']}")
@@ -164,18 +166,33 @@ def main():
                         if str(bai['HinhAnh']).startswith("http"): st.image(bai['HinhAnh'])
                         st.divider()
 
+        # === [TÍNH NĂNG MỚI] BẢNG QUẢN LÝ CÂU HỎI ===
         elif "QUẢN LÝ CÂU HỎI" in menu:
-            st.title("⚙️ CẬP NHẬT CÂU HỎI")
-            with st.form("add_q"):
-                q = st.text_input("NỘI DUNG CÂU HỎI")
-                c1, c2 = st.columns(2)
-                a, b = c1.text_input("A"), c1.text_input("B")
-                c, d = c2.text_input("C"), c2.text_input("D")
-                dung = st.selectbox("ĐÁP ÁN ĐÚNG", ["A", "B", "C", "D"])
-                gt = st.text_area("GIẢI THÍCH")
-                if st.form_submit_button("LƯU"):
-                    db.worksheet("CauHoi").append_row([q, a, b, c, d, dung, gt])
-                    st.success("ĐÃ LƯU")
+            st.title("⚙️ HIỆU CHỈNH NGÂN HÀNG CÂU HỎI")
+            st.info("💡 Hướng dẫn: Bấm trực tiếp vào ô để sửa. Chọn dòng và bấm Delete để xóa. Bấm nút '+' ở dưới bảng để thêm câu mới.")
+            
+            # 1. Tải dữ liệu về DataFrame
+            ws_cauhoi = db.worksheet("CauHoi")
+            data = ws_cauhoi.get_all_records()
+            df = pd.DataFrame(data)
+
+            # 2. Hiển thị bảng Edit (Cho phép thêm/xóa dòng - num_rows="dynamic")
+            edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, height=500)
+
+            # 3. Nút Lưu
+            if st.button("💾 LƯU MỌI THAY ĐỔI VÀO GOOGLE SHEET", type="primary"):
+                with st.spinner("Đang đồng bộ dữ liệu..."):
+                    try:
+                        # Xóa cũ -> Ghi mới
+                        ws_cauhoi.clear()
+                        # Chuẩn bị dữ liệu (Header + Values)
+                        rows_to_update = [edited_df.columns.values.tolist()] + edited_df.values.tolist()
+                        ws_cauhoi.update(rows_to_update)
+                        st.success("✅ Đã cập nhật thành công!")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Lỗi khi lưu: {e}")
 
         elif "SÁT HẠCH LÝ THUYẾT" in menu:
             # 1. CHƯA BẮT ĐẦU
@@ -210,7 +227,6 @@ def main():
                 cau = ds[idx]
                 while len(cau) < 7: cau.append("")
 
-                # === TRẠNG THÁI: ĐANG SUY NGHĨ (CHƯA NỘP CÂU) ===
                 if not st.session_state['da_nop_cau']:
                     if st.session_state['thoi_gian_het'] is None: 
                         st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -233,8 +249,6 @@ def main():
                                 st.rerun()
                             else: st.warning("Chọn đáp án!")
                     time.sleep(1); st.rerun()
-                
-                # === TRẠNG THÁI: ĐÃ CHỐT ĐÁP ÁN (HIỆN KẾT QUẢ & NÚT CÂU TIẾP) ===
                 else:
                     nguoi_chon = st.session_state['lua_chon']
                     dap_an_dung = str(cau[5]).strip().upper()
@@ -242,7 +256,6 @@ def main():
                     else: st.error(f"❌ SAI RỒI! Đáp án đúng: {dap_an_dung}")
                     if str(cau[6]).strip(): st.info(f"💡 {cau[6]}")
                     
-                    # Nút CÂU TIẾP chỉ nằm trong khối ELSE này
                     if st.button("CÂU TIẾP"):
                         if nguoi_chon == dap_an_dung: st.session_state['diem_so'] += 1
                         st.session_state['chi_so'] += 1; st.session_state['da_nop_cau'] = False
