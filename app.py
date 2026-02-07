@@ -20,7 +20,7 @@ def connect_db():
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         
     client = gspread.authorize(creds)
-    sheet = client.open("HeThongTracNghiem") # Đảm bảo tên Sheet đúng 100%
+    sheet = client.open("HeThongTracNghiem") 
     return sheet
 
 # --- HÀM ĐĂNG NHẬP ---
@@ -29,11 +29,9 @@ def login(sheet, user, pwd):
         users_ws = sheet.worksheet("Users")
         records = users_ws.get_all_records()
         for record in records:
-            # Chuyển về chuỗi để so sánh chính xác
             if str(record['Username']).strip() == str(user).strip() and str(record['Password']).strip() == str(pwd).strip():
                 return record['Role'], record['HoTen']
     except Exception as e:
-        st.error(f"Lỗi đăng nhập: {e}")
         return None, None
     return None, None
 
@@ -54,7 +52,7 @@ def get_questions(sheet):
 def main():
     st.set_page_config(page_title="Thi Trắc Nghiệm", page_icon="📝")
     
-    # CSS tùy chỉnh để làm đẹp
+    # CSS tùy chỉnh
     st.markdown("""
         <style>
         .stAlert { padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;}
@@ -62,15 +60,14 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
-    # Kết nối Database (Có bắt lỗi để không bị trắng màn hình)
+    # Kết nối Database
     try:
         db = connect_db()
     except Exception as e:
-        st.error(f"❌ KHÔNG KẾT NỐI ĐƯỢC GOOGLE SHEET!\nLỗi chi tiết: {e}")
-        st.info("💡 Gợi ý: Kiểm tra lại file credentials.json hoặc tên file Google Sheet đã chia sẻ quyền chưa.")
+        st.error(f"❌ KHÔNG KẾT NỐI ĐƯỢC GOOGLE SHEET!\nLỗi: {e}")
         st.stop()
 
-    # --- KHỞI TẠO SESSION STATE (Lưu trạng thái) ---
+    # --- KHỞI TẠO SESSION STATE ---
     if 'role' not in st.session_state: st.session_state['role'] = None
     if 'current_index' not in st.session_state: st.session_state['current_index'] = 0
     if 'score' not in st.session_state: st.session_state['score'] = 0
@@ -97,7 +94,7 @@ def main():
                     st.session_state['role'] = role
                     st.session_state['user'] = username
                     st.session_state['hoten'] = hoten
-                    # Reset toàn bộ dữ liệu cũ
+                    # Reset dữ liệu cũ
                     st.session_state['current_index'] = 0
                     st.session_state['score'] = 0
                     st.session_state['questions'] = []
@@ -142,7 +139,7 @@ def main():
     # 3. GIAO DIỆN HỌC VIÊN
     # ==========================================
     elif st.session_state['role'] == 'student':
-        # Tải câu hỏi lần đầu
+        # Tải câu hỏi
         if not st.session_state['questions']:
             try:
                 st.session_state['questions'] = get_questions(db)
@@ -153,26 +150,31 @@ def main():
         questions = st.session_state['questions']
         idx = st.session_state['current_index']
 
-        # Sidebar
         st.sidebar.markdown(f"👋 Xin chào: **{st.session_state['hoten']}**")
         st.sidebar.metric("Điểm số", st.session_state['score'])
         
-        # --- KIỂM TRA HẾT CÂU HỎI ---
+        # --- [TÍNH NĂNG MỚI] TỰ ĐỘNG LƯU VÀ THOÁT ---
         if idx >= len(questions):
-            st.balloons()
-            st.success("🎉 BẠN ĐÃ HOÀN THÀNH BÀI THI!")
-            st.markdown(f"### Tổng điểm: {st.session_state['score']} / {len(questions)}")
+            # 1. Lưu điểm ngay lập tức
+            luu_diem(db, st.session_state['user'], st.session_state['score'], st.session_state['hoten'])
             
-            if st.button("Lưu kết quả & Thoát"):
-                luu_diem(db, st.session_state['user'], st.session_state['score'], st.session_state['hoten'])
-                st.session_state['role'] = None
-                st.rerun()
+            # 2. Hiệu ứng chúc mừng
+            st.balloons()
+            st.success(f"🎉 BẠN ĐÃ HOÀN THÀNH BÀI THI!")
+            st.info(f"💾 Kết quả: {st.session_state['score']}/{len(questions)} đã được lưu. Đang tự động đăng xuất...")
+            
+            # 3. Đợi 3 giây để học viên kịp nhìn điểm
+            time.sleep(3)
+            
+            # 4. Đăng xuất và Quay về màn hình chính
+            st.session_state['role'] = None
+            st.rerun()
             return
 
         # --- HIỂN THỊ CÂU HỎI ---
         q_data = questions[idx]
         
-        # Tìm nội dung giải thích (Code thông minh: tự dò tên cột)
+        # Tìm cột giải thích
         giai_thich = ""
         possible_headers = ["GiaiThich", "Giải Thích", "Explain", "Giai thich"]
         for header in possible_headers:
@@ -185,58 +187,47 @@ def main():
         st.info(f"{q_data['CauHoi']}")
 
         # ----------------------------------------------
-        # TRẠNG THÁI A: ĐANG LÀM BÀI (Chưa nộp)
+        # TRẠNG THÁI A: ĐANG LÀM BÀI
         # ----------------------------------------------
         if not st.session_state['submitted_answer']:
-            # 1. Logic Đếm ngược
             if st.session_state['end_time_question'] is None:
                 st.session_state['end_time_question'] = time.time() + THOI_GIAN_MOI_CAU
             
             time_left = st.session_state['end_time_question'] - time.time()
             
-            # Hết giờ -> Tự động nộp bài
             if time_left <= 0:
                 st.session_state['submitted_answer'] = True
                 st.session_state['user_choice'] = None 
                 st.rerun()
 
-            # Thanh thời gian
             st.progress(max(0.0, min(1.0, time_left / THOI_GIAN_MOI_CAU)))
             st.caption(f"⏱️ Thời gian còn lại: {int(time_left)} giây")
 
-            # 2. Form Trả lời
             with st.form(key=f"form_{idx}"):
-                # Tạo list đáp án (xử lý trường hợp D bị trống)
-                options = [
-                    f"A. {q_data['DapAn_A']}", 
-                    f"B. {q_data['DapAn_B']}", 
-                    f"C. {q_data['DapAn_C']}"
-                ]
-                # Nếu có đáp án D thì thêm vào
+                options = [f"A. {q_data['DapAn_A']}", f"B. {q_data['DapAn_B']}", f"C. {q_data['DapAn_C']}"]
                 if 'DapAn_D' in q_data and str(q_data['DapAn_D']).strip():
                     options.append(f"D. {q_data['DapAn_D']}")
 
-                choice = st.radio("Chọn đáp án của bạn:", options, index=None)
+                choice = st.radio("Chọn đáp án:", options, index=None)
                 
                 if st.form_submit_button("Chốt đáp án"):
                     if choice:
-                        st.session_state['user_choice'] = choice.split(".")[0] # Lấy A,B,C,D
+                        st.session_state['user_choice'] = choice.split(".")[0]
                         st.session_state['submitted_answer'] = True
                         st.rerun()
                     else:
-                        st.warning("⚠️ Vui lòng chọn đáp án trước khi nộp!")
+                        st.warning("⚠️ Vui lòng chọn đáp án!")
 
-            time.sleep(1) # Refresh đồng hồ
+            time.sleep(1)
             st.rerun()
 
         # ----------------------------------------------
-        # TRẠNG THÁI B: XEM KẾT QUẢ & GIẢI THÍCH
+        # TRẠNG THÁI B: XEM KẾT QUẢ
         # ----------------------------------------------
         else:
             user_ans = st.session_state['user_choice']
             correct_ans = str(q_data['DapAn_Dung']).strip().upper()
 
-            # Hiển thị kết quả
             is_correct = False
             if user_ans == correct_ans:
                 st.success(f"✅ **CHÍNH XÁC!**\n\n💡 **Giải thích:** {giai_thich}")
@@ -251,13 +242,11 @@ def main():
                 if is_correct:
                     st.session_state['score'] += 1
                 
-                # Reset sang câu mới
                 st.session_state['current_index'] += 1
                 st.session_state['submitted_answer'] = False
                 st.session_state['user_choice'] = None
                 st.session_state['end_time_question'] = None
                 st.rerun()
 
-# --- QUAN TRỌNG: DÒNG LỆNH CHẠY ỨNG DỤNG ---
 if __name__ == "__main__":
     main()
