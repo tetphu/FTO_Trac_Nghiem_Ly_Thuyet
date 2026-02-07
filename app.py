@@ -6,7 +6,7 @@ import time
 # --- 1. CẤU HÌNH ---
 THOI_GIAN_MOI_CAU = 30
 
-# --- 2. HÀM GIAO DIỆN (ĐỂ RIÊNG TRÁNH LỖI COPY) ---
+# --- 2. HÀM GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
@@ -98,7 +98,7 @@ def lay_giao_trinh(db):
 # --- 5. CHƯƠNG TRÌNH CHÍNH ---
 def main():
     st.set_page_config(page_title="FTO System", page_icon="🚓", layout="wide")
-    inject_css() # Gọi hàm CSS
+    inject_css() 
 
     if 'vai_tro' not in st.session_state: 
         st.session_state.update(vai_tro=None, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False, thoi_gian_het=None, lua_chon=None)
@@ -136,12 +136,9 @@ def main():
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
             st.markdown(f"### 👮 Sĩ quan: {st.session_state['ho_ten']}")
             st.code(f"Vai trò: {st.session_state['vai_tro']}") 
-            
-            # Sửa lỗi IndentationError ở đây:
             if st.session_state['bat_dau']:
                 st.divider()
                 st.metric("🏆 ĐIỂM", f"{st.session_state['diem_so']}")
-            
             st.divider()
             
             ds_chuc_nang = ["📝 SÁT HẠCH LÝ THUYẾT"]
@@ -181,9 +178,7 @@ def main():
                     st.success("ĐÃ LƯU")
 
         elif "SÁT HẠCH LÝ THUYẾT" in menu:
-            # === SỬA LỖI LOGIC: DÙNG IF/ELSE ĐỂ TÁCH BIỆT 2 MÀN HÌNH ===
-            
-            # 1. TRƯỜNG HỢP CHƯA BẮT ĐẦU -> CHỈ HIỆN NÚT
+            # 1. CHƯA BẮT ĐẦU
             if not st.session_state['bat_dau']:
                 c1, c2, c3 = st.columns([1,2,1])
                 with c2:
@@ -195,7 +190,7 @@ def main():
                         st.session_state['bat_dau'] = True
                         st.rerun()
             
-            # 2. TRƯỜNG HỢP ĐÃ BẮT ĐẦU -> CHỈ HIỆN CÂU HỎI
+            # 2. ĐÃ BẮT ĐẦU
             else:
                 if not st.session_state['ds_cau_hoi']:
                     raw = db.worksheet("CauHoi").get_all_values()
@@ -215,6 +210,7 @@ def main():
                 cau = ds[idx]
                 while len(cau) < 7: cau.append("")
 
+                # === TRẠNG THÁI: ĐANG SUY NGHĨ (CHƯA NỘP CÂU) ===
                 if not st.session_state['da_nop_cau']:
                     if st.session_state['thoi_gian_het'] is None: 
                         st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -237,12 +233,16 @@ def main():
                                 st.rerun()
                             else: st.warning("Chọn đáp án!")
                     time.sleep(1); st.rerun()
+                
+                # === TRẠNG THÁI: ĐÃ CHỐT ĐÁP ÁN (HIỆN KẾT QUẢ & NÚT CÂU TIẾP) ===
                 else:
                     nguoi_chon = st.session_state['lua_chon']
                     dap_an_dung = str(cau[5]).strip().upper()
                     if nguoi_chon == dap_an_dung: st.success("✅ CHÍNH XÁC!")
                     else: st.error(f"❌ SAI RỒI! Đáp án đúng: {dap_an_dung}")
                     if str(cau[6]).strip(): st.info(f"💡 {cau[6]}")
+                    
+                    # Nút CÂU TIẾP chỉ nằm trong khối ELSE này
                     if st.button("CÂU TIẾP"):
                         if nguoi_chon == dap_an_dung: st.session_state['diem_so'] += 1
                         st.session_state['chi_so'] += 1; st.session_state['da_nop_cau'] = False
