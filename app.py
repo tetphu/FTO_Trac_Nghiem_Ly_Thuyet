@@ -153,7 +153,7 @@ def main():
             with c1:
                 st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=200)
             with c2:
-                st.markdown('<div class="gcpd-title">GACHA CITY POLICE DEPARTMENT</div>', unsafe_allow_html=True)
+                st.markdown('<div class="gcpd-title">GACHA CITY<BR>POLICE DEPARTMENT<BR>FTO - GCPD</div>', unsafe_allow_html=True)
             
             st.divider() # Đường kẻ ngăn cách
             
@@ -284,7 +284,7 @@ def main():
                 # Header nhỏ trong mỗi câu hỏi
                 c1, c2 = st.columns([1, 4])
                 with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
-                with c2: st.markdown(f"**HỒ SƠ TÌNH HUỐNG SỐ {idx+1}**")
+                with c2: st.markdown(f"**TÌNH HUỐNG SỐ {idx+1}**")
                 
                 st.markdown(f'<div class="q-box">CÂU {idx+1}: {cau[0]}</div>', unsafe_allow_html=True)
                 opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
