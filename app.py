@@ -160,7 +160,7 @@ def main():
             # --- PHẦN NHẬP LIỆU ---
             st.markdown("### ▼ XÁC THỰC DANH TÍNH SĨ QUAN")
             u = st.text_input("SỐ HIỆU ( Nhập Số momo )")
-            p = st.text_input("MÃ BẢO MẬT ( Giảng Viên cung cấp )", type="password")
+            p = st.text_input("MÃ BẢO MẬT ( Callsign / Giảng Viên cung cấp )", type="password")
             st.write("")
             
             if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
@@ -334,4 +334,5 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
