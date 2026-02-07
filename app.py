@@ -13,14 +13,15 @@ def ket_noi_csdl():
         if "gcp_service_account" in st.secrets:
             creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
         else:
+            # Nếu chạy local thì cần file credentials.json
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         client = gspread.authorize(creds)
         return client.open("HeThongTracNghiem")
     except Exception as e:
-        st.error(f"LỖI KẾT NỐI: {str(e)}")
+        st.error(f"Lỗi kết nối: {str(e)}")
         return None
 
-# --- XỬ LÝ ĐĂNG NHẬP (TỰ ĐỘNG MAP ROLE) ---
+# --- XỬ LÝ ĐĂNG NHẬP (HỖ TRỢ CẢ ADMIN/STUDENT) ---
 def kiem_tra_dang_nhap(db, user, pwd):
     try:
         ws = db.worksheet("HocVien")
@@ -34,7 +35,7 @@ def kiem_tra_dang_nhap(db, user, pwd):
                 status = str(row[4]).strip() if len(row) > 4 else ""
                 if status == 'DaThi': return "DA_KHOA", None
                 
-                # Xử lý vai trò linh hoạt (admin/student hoặc GiangVien/hocvien đều được)
+                # Xử lý mapping vai trò
                 role_goc = str(row[2]).strip()
                 name = str(row[3]).strip()
                 
@@ -62,32 +63,31 @@ def luu_ket_qua(db, user, diem):
 def main():
     st.set_page_config(page_title="GCPD System", page_icon="🚓", layout="centered")
 
-    # CSS (ĐÃ SỬA LỖI TRIPLE QUOTE)
+    # --- CSS: STYLE CHO FORM NHƯ THẺ HỒ SƠ ---
     st.markdown("""
         <style>
-        .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 800px; }
+        .block-container { padding-top: 2rem; padding-bottom: 5rem; max-width: 800px; }
         header, footer { visibility: hidden; }
         .stApp { background-color: #ffffff; }
         
-        /* HEADER STYLE */
+        /* HEADER STYLE (CHỮ BÊN TRONG KHUNG) */
         .gcpd-title {
             font-family: 'Arial Black', sans-serif;
             color: #002147; 
-            font-size: 32px;
+            font-size: 24px;
             text-transform: uppercase;
-            margin-top: 15px;
+            margin-top: 10px;
             line-height: 1.2;
             font-weight: 900;
         }
         
-        /* KHUNG VIỀN FORM */
-        .form-box {
-            border: 2px solid #002147;
-            border-radius: 8px;
-            padding: 30px;
+        /* ĐÓNG KHUNG FORM STYLE CẢNH SÁT */
+        [data-testid="stForm"] {
+            border: 3px solid #002147;
+            border-radius: 12px;
+            padding: 20px;
             background-color: #f8f9fa;
-            margin-top: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
 
         /* INPUT & BUTTON */
@@ -107,6 +107,7 @@ def main():
             padding: 12px;
             text-transform: uppercase;
             margin-top: 10px;
+            font-size: 16px;
         }
         .stButton button:hover { background-color: #003366 !important; }
         
@@ -142,24 +143,26 @@ def main():
     db = ket_noi_csdl()
     if not db: st.stop()
 
-    # --- HEADER (KHÔNG CÓ KHUNG) ---
-    col1, col2 = st.columns([1, 2.5])
-    with col1:
-        st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=220)
-    with col2:
-        st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
-    st.write("")
-
     # ==========================================
-    # 1. ĐĂNG NHẬP
+    # 1. ĐĂNG NHẬP (LOGO + FORM TRONG CÙNG 1 KHUNG)
     # ==========================================
     if st.session_state['vai_tro'] is None:
-        st.markdown('<div class="form-box">', unsafe_allow_html=True)
-        st.subheader("▼ XÁC THỰC DANH TÍNH")
         with st.form("login"):
+            # --- PHẦN HEADER ĐƯỢC ĐƯA VÀO TRONG FORM ---
+            c1, c2 = st.columns([1, 2.5])
+            with c1:
+                st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=140)
+            with c2:
+                st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
+            
+            st.divider() # Đường kẻ ngăn cách
+            
+            # --- PHẦN NHẬP LIỆU ---
+            st.markdown("### ▼ XÁC THỰC DANH TÍNH")
             u = st.text_input("SỐ HIỆU (USER)")
             p = st.text_input("MÃ BẢO MẬT (PASS)", type="password")
             st.write("")
+            
             if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
                 vt, ten = kiem_tra_dang_nhap(db, u, p)
                 if vt == "DA_KHOA": st.error("⛔ HỒ SƠ ĐÃ KHÓA")
@@ -167,7 +170,6 @@ def main():
                     st.session_state.update(vai_tro=vt, user=u, ho_ten=ten, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False)
                     st.rerun()
                 else: st.error("❌ SAI THÔNG TIN")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # 2. GIẢNG VIÊN
@@ -176,9 +178,13 @@ def main():
         st.sidebar.markdown(f"**CHỈ HUY:** {st.session_state['ho_ten']}")
         if st.sidebar.button("ĐĂNG XUẤT"): st.session_state['vai_tro'] = None; st.rerun()
         
-        st.markdown('<div class="form-box">', unsafe_allow_html=True)
-        st.subheader("CẬP NHẬT DỮ LIỆU")
         with st.form("add"):
+            # Header nhỏ hơn cho trang quản trị
+            c1, c2 = st.columns([1, 4])
+            with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=60)
+            with c2: st.markdown("### CẬP NHẬT DỮ LIỆU")
+            st.divider()
+
             q = st.text_input("NỘI DUNG CÂU HỎI")
             c1, c2 = st.columns(2)
             a, b = c1.text_input("ĐÁP ÁN A"), c1.text_input("ĐÁP ÁN B")
@@ -190,7 +196,6 @@ def main():
                     db.worksheet("CauHoi").append_row([q, a, b, c, d, dung, gt])
                     st.success("ĐÃ LƯU")
                 except Exception as e: st.error(str(e))
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # 3. HỌC VIÊN
@@ -201,15 +206,23 @@ def main():
         
         # --- MÀN HÌNH CHỜ ---
         if not st.session_state['bat_dau']:
-            st.markdown('<div class="form-box" style="text-align:center;">', unsafe_allow_html=True)
-            st.markdown("""
-                <h3 style="color:#002147;">Đã sẵn sàng chưa nào!</h3>
-                <p style="font-size:18px; font-weight:bold; color:#333;">Chúc Sĩ Quan thi tốt</p>
-            """, unsafe_allow_html=True)
-            if st.button("BẮT ĐẦU THI"):
-                st.session_state['bat_dau'] = True
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.form("ready_form"): 
+                # Header trong khung
+                c1, c2 = st.columns([1, 2.5])
+                with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=140)
+                with c2: st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
+                st.divider()
+
+                st.markdown("""
+                    <div style="text-align:center; padding: 20px;">
+                        <h3 style="color:#002147;">Đã sẵn sàng chưa nào!</h3>
+                        <p style="font-size:18px; font-weight:bold; color:#333;">Chúc Sĩ Quan thi tốt</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if st.form_submit_button("BẮT ĐẦU THI"):
+                    st.session_state['bat_dau'] = True
+                    st.rerun()
             return
 
         # --- TẢI DỮ LIỆU ---
@@ -226,30 +239,33 @@ def main():
         # --- KẾT THÚC ---
         if idx >= len(ds):
             st.balloons()
-            st.markdown('<div class="form-box" style="text-align:center;">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#002147;">✅ NHIỆM VỤ HOÀN TẤT</h2>', unsafe_allow_html=True)
-            st.markdown("""
-                <p style="font-weight:bold; margin:20px;">
-                Chúc mừng Sĩ Quan đã thi xong phần trắc nghiệm lý thuyết.<br>
-                Kết quả sẽ được thông báo tới Sĩ Quan ngay sau khi FTO Manager duyệt.
-                </p>
-            """, unsafe_allow_html=True)
-            
-            if st.button("XÁC NHẬN (OK)"):
-                with st.spinner("Đang lưu hồ sơ..."):
-                    luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
-                    time.sleep(2)
-                    st.session_state['vai_tro'] = None
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.form("end_form"):
+                # Header trong khung
+                c1, c2 = st.columns([1, 2.5])
+                with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=140)
+                with c2: st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
+                st.divider()
+
+                st.markdown('<h2 style="color:#002147; text-align:center;">✅ NHIỆM VỤ HOÀN TẤT</h2>', unsafe_allow_html=True)
+                st.markdown("""
+                    <p style="font-weight:bold; margin:20px; text-align:center;">
+                    Chúc mừng Sĩ Quan đã thi xong phần trắc nghiệm lý thuyết.<br>
+                    Kết quả sẽ được thông báo tới Sĩ Quan ngay sau khi FTO Manager duyệt.
+                    </p>
+                """, unsafe_allow_html=True)
+                
+                if st.form_submit_button("XÁC NHẬN (OK)"):
+                    with st.spinner("Đang lưu hồ sơ..."):
+                        luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
+                        time.sleep(2)
+                        st.session_state['vai_tro'] = None
+                        st.rerun()
             return
 
         # --- CÂU HỎI ---
         cau = ds[idx]
         while len(cau) < 7: cau.append("")
 
-        st.markdown('<div class="form-box">', unsafe_allow_html=True)
-        
         if not st.session_state['da_nop_cau']:
             if st.session_state['thoi_gian_het'] is None: 
                 st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -265,6 +281,11 @@ def main():
             st.caption(f"THỜI GIAN: {con_lai}s")
 
             with st.form(f"f_{idx}"):
+                # Header nhỏ trong mỗi câu hỏi
+                c1, c2 = st.columns([1, 4])
+                with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
+                with c2: st.markdown(f"**HỒ SƠ TÌNH HUỐNG SỐ {idx+1}**")
+                
                 st.markdown(f'<div class="q-box">CÂU {idx+1}: {cau[0]}</div>', unsafe_allow_html=True)
                 opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
                 if str(cau[4]).strip(): opts.append(f"D. {cau[4]}")
@@ -280,8 +301,12 @@ def main():
             time.sleep(1); st.rerun()
         
         else:
-            # HIỆN KẾT QUẢ
+            # HIỆN KẾT QUẢ (DÙNG FORM ĐỂ GIỮ KHUNG)
             with st.form(f"res_{idx}"):
+                c1, c2 = st.columns([1, 4])
+                with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
+                with c2: st.markdown(f"**KẾT QUẢ TÌNH HUỐNG SỐ {idx+1}**")
+
                 st.markdown(f'<div class="q-box">CÂU {idx+1}: {cau[0]}</div>', unsafe_allow_html=True)
                 
                 nguoi_chon = st.session_state['lua_chon']
@@ -301,9 +326,7 @@ def main():
                     st.session_state['da_nop_cau'] = False
                     st.session_state['thoi_gian_het'] = None
                     st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
     
-    # --- LỖI VAI TRÒ ---
     else:
         st.error(f"LỖI VAI TRÒ: {st.session_state['vai_tro']}")
         if st.button("QUAY LẠI"): st.session_state['vai_tro'] = None; st.rerun()
