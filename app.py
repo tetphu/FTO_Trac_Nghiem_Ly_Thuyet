@@ -63,7 +63,7 @@ def luu_ket_qua(db, user, diem):
 def main():
     st.set_page_config(page_title="FTO GCPD", page_icon="🚓", layout="centered")
 
-    # --- CSS: STYLE CHO FORM NHƯ THẺ HỒ SƠ ---
+    # --- CSS: STYLE VỚI HÌNH NỀN TÙY CHỈNH ---
     st.markdown("""
         <style>
         .block-container { padding-top: 2rem; padding-bottom: 5rem; max-width: 800px; }
@@ -81,12 +81,22 @@ def main():
             font-weight: 900;
         }
         
-        /* ĐÓNG KHUNG FORM STYLE CẢNH SÁT */
+        /* ĐÓNG KHUNG FORM STYLE CẢNH SÁT + HÌNH NỀN */
         [data-testid="stForm"] {
             border: 3px solid #002147;
             border-radius: 12px;
             padding: 20px;
-            background-color: #f8f9fa;
+            
+            /* --- CẤU HÌNH HÌNH NỀN TẠI ĐÂY --- */
+            background-image: url("https://raw.githubusercontent.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/refs/heads/main/nen.png");
+            background-size: cover;       /* Bao phủ toàn bộ khung */
+            background-position: center;  /* Căn giữa hình */
+            background-repeat: no-repeat; /* Không lặp lại */
+            
+            /* Lớp phủ màu trắng mờ 85% để chữ dễ đọc đè lên hình nền */
+            background-color: rgba(255, 255, 255, 0.85); 
+            background-blend-mode: overlay;
+            
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
 
@@ -94,7 +104,7 @@ def main():
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
             border: 2px solid #002147 !important;
             border-radius: 4px !important;
-            background-color: #fff !important;
+            background-color: #fff !important; /* Nền ô nhập liệu màu trắng cho rõ */
             color: #000 !important;
             font-weight: bold;
         }
@@ -119,7 +129,7 @@ def main():
         
         /* QUESTION BOX */
         .q-box {
-            background: #e9ecef;
+            background: rgba(233, 236, 239, 0.9); /* Làm mờ nhẹ nền câu hỏi */
             padding: 15px;
             border-left: 5px solid #002147;
             margin-bottom: 15px;
@@ -332,7 +342,4 @@ def main():
         if st.button("QUAY LẠI"): st.session_state['vai_tro'] = None; st.rerun()
 
 if __name__ == "__main__":
-
     main()
-
-
