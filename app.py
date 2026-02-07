@@ -1,246 +1,285 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 import time
+from datetime import datetime
 
-# --- CẤU HÌNH ---
-THOI_GIAN_MOI_CAU = 30  # Số giây cho mỗi câu
+# --- CẤU HÌNH HỆ THỐNG ---
+THOI_GIAN_MOI_CAU = 30  # Số giây cho mỗi câu hỏi
 
-# --- HÀM KẾT NỐI DATABASE ---
-def connect_db():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# --- HÀM KẾT NỐI GOOGLE SHEET ---
+def ket_noi_csdl():
+    pham_vi = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    
+    # Kiểm tra xem đang chạy trên Cloud (Secrets) hay máy cá nhân
     if "gcp_service_account" in st.secrets:
-        creds_dict = st.secrets["gcp_service_account"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        thong_tin_xac_thuc = st.secrets["gcp_service_account"]
+        chung_chi = ServiceAccountCredentials.from_json_keyfile_dict(thong_tin_xac_thuc, pham_vi)
     else:
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-    client = gspread.authorize(creds)
-    sheet = client.open("HeThongTracNghiem") 
-    return sheet
+        chung_chi = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", pham_vi)
+        
+    khach_hang = gspread.authorize(chung_chi)
+    # Mở bảng tính theo tên
+    bang_tinh = khach_hang.open("HeThongTracNghiem") 
+    return bang_tinh
 
-# --- HÀM ĐĂNG NHẬP (CÓ KIỂM TRA ĐÃ THI CHƯA) ---
-def login(sheet, user, pwd):
+# --- HÀM XỬ LÝ ĐĂNG NHẬP ---
+def kiem_tra_dang_nhap(bang_tinh, ten_dang_nhap, mat_khau):
     try:
-        users_ws = sheet.worksheet("Users")
-        records = users_ws.get_all_records()
-        for record in records:
-            # So sánh Username và Password
-            if str(record['Username']).strip() == str(user).strip() and str(record['Password']).strip() == str(pwd).strip():
+        # Truy cập vào Tab 'HocVien'
+        trang_hoc_vien = bang_tinh.worksheet("HocVien")
+        danh_sach_ban_ghi = trang_hoc_vien.get_all_records()
+        
+        for ban_ghi in danh_sach_ban_ghi:
+            # So sánh Tên đăng nhập và Mật khẩu (Dùng cột tiếng Việt)
+            if str(ban_ghi['TenDangNhap']).strip() == str(ten_dang_nhap).strip() and str(ban_ghi['MatKhau']).strip() == str(mat_khau).strip():
                 
-                # [MỚI] Kiểm tra cột TrangThai
-                trang_thai = str(record.get('TrangThai', '')).strip()
+                # Kiểm tra xem đã thi chưa
+                trang_thai = str(ban_ghi.get('TrangThai', '')).strip()
                 if trang_thai == 'DaThi':
-                    return "LOCKED", None # Trả về cờ báo đã bị khóa
+                    return "DA_KHOA", None 
                 
-                return record['Role'], record['HoTen']
-    except Exception as e:
+                # Trả về Vai trò và Họ tên
+                return ban_ghi['VaiTro'], ban_ghi['HoTen']
+    except Exception as loi:
+        st.error(f"Lỗi đăng nhập: {loi}")
         return None, None
     return None, None
 
-# --- HÀM LƯU ĐIỂM ---
-def luu_diem(sheet, user, diem, hoten):
+# --- HÀM LƯU ĐIỂM SỐ VÀ KHÓA TÀI KHOẢN ---
+def luu_ket_qua(bang_tinh, ten_dang_nhap, diem_so):
     try:
-        scores_ws = sheet.worksheet("Scores")
-        scores_ws.append_row([user, hoten, diem, str(datetime.now())])
-    except Exception as e:
-        st.error(f"Lỗi lưu điểm: {e}")
+        trang_hoc_vien = bang_tinh.worksheet("HocVien")
+        
+        # Tìm dòng chứa Tên đăng nhập
+        o_tim_thay = trang_hoc_vien.find(ten_dang_nhap)
+        
+        # Cập nhật cột E (TrangThai - Cột 5) thành 'DaThi'
+        trang_hoc_vien.update_cell(o_tim_thay.row, 5, "DaThi")
+        
+        # Cập nhật cột F (DiemSo - Cột 6)
+        trang_hoc_vien.update_cell(o_tim_thay.row, 6, str(diem_so))
+        
+        return True
+    except Exception as loi:
+        st.error(f"Lỗi khi lưu kết quả: {loi}")
+        return False
 
-# --- [MỚI] HÀM KHÓA TÀI KHOẢN ---
-def khoa_tai_khoan(sheet, user):
-    try:
-        ws = sheet.worksheet("Users")
-        # Tìm ô chứa username để biết nó nằm dòng nào
-        cell = ws.find(user)
-        # Cập nhật cột E (Cột thứ 5 - TrangThai) thành "DaThi"
-        ws.update_cell(cell.row, 5, "DaThi")
-    except Exception as e:
-        print(f"Lỗi khóa tài khoản: {e}")
+# --- HÀM LẤY DANH SÁCH CÂU HỎI ---
+def lay_du_lieu_cau_hoi(bang_tinh):
+    # Truy cập vào Tab 'CauHoi'
+    trang_cau_hoi = bang_tinh.worksheet("CauHoi")
+    return trang_cau_hoi.get_all_records()
 
-# --- HÀM LẤY CÂU HỎI ---
-def get_questions(sheet):
-    ws = sheet.worksheet("Questions")
-    return ws.get_all_records()
-
-# --- GIAO DIỆN CHÍNH ---
+# --- GIAO DIỆN CHÍNH CỦA PHẦN MỀM ---
 def main():
-    st.set_page_config(page_title="Thi Trắc Nghiệm", page_icon="📝")
+    st.set_page_config(page_title="Thi Trắc Nghiệm Online", page_icon="🇻🇳")
+    
+    # CSS làm đẹp giao diện tiếng Việt
     st.markdown("""
         <style>
         .stAlert { padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;}
-        .stButton button { width: 100%; margin-top: 10px; font-weight: bold;}
+        .stButton button { width: 100%; margin-top: 10px; font-weight: bold; font-size: 16px;}
+        h1, h2, h3 { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         </style>
     """, unsafe_allow_html=True)
 
+    # Kết nối CSDL
     try:
-        db = connect_db()
-    except Exception as e:
-        st.error(f"❌ KHÔNG KẾT NỐI ĐƯỢC GOOGLE SHEET!\nLỗi: {e}")
+        db = ket_noi_csdl()
+    except Exception as loi:
+        st.error(f"❌ Không thể kết nối Google Sheet! Vui lòng kiểm tra lại file cấu hình. Chi tiết: {loi}")
         st.stop()
 
-    if 'role' not in st.session_state: st.session_state['role'] = None
-    if 'current_index' not in st.session_state: st.session_state['current_index'] = 0
-    if 'score' not in st.session_state: st.session_state['score'] = 0
-    if 'questions' not in st.session_state: st.session_state['questions'] = []
-    if 'submitted_answer' not in st.session_state: st.session_state['submitted_answer'] = False
-    if 'user_choice' not in st.session_state: st.session_state['user_choice'] = None
-    if 'end_time_question' not in st.session_state: st.session_state['end_time_question'] = None
+    # --- KHỞI TẠO CÁC BIẾN TRẠNG THÁI (SESSION STATE) ---
+    if 'vai_tro' not in st.session_state: st.session_state['vai_tro'] = None
+    if 'chi_so_cau_hien_tai' not in st.session_state: st.session_state['chi_so_cau_hien_tai'] = 0
+    if 'diem_so' not in st.session_state: st.session_state['diem_so'] = 0
+    if 'danh_sach_cau_hoi' not in st.session_state: st.session_state['danh_sach_cau_hoi'] = []
+    
+    # Trạng thái trong 1 câu hỏi
+    if 'da_nop_cau_nay' not in st.session_state: st.session_state['da_nop_cau_nay'] = False
+    if 'lua_chon_cua_hoc_vien' not in st.session_state: st.session_state['lua_chon_cua_hoc_vien'] = None
+    if 'thoi_gian_ket_thuc_cau' not in st.session_state: st.session_state['thoi_gian_ket_thuc_cau'] = None
 
     # ==========================================
     # 1. MÀN HÌNH ĐĂNG NHẬP
     # ==========================================
-    if st.session_state['role'] is None:
-        st.title("🎓 Đăng Nhập Hệ Thống")
-        with st.form("login_form"):
-            username = st.text_input("Tên đăng nhập")
-            password = st.text_input("Mật khẩu", type="password")
-            submit = st.form_submit_button("Đăng Nhập")
+    if st.session_state['vai_tro'] is None:
+        st.title("🎓 Hệ Thống Thi Trắc Nghiệm")
+        st.write("Chào mừng bạn! Vui lòng đăng nhập để bắt đầu.")
+        
+        with st.form("form_dang_nhap"):
+            nhap_ten = st.text_input("Tên đăng nhập")
+            nhap_mat_khau = st.text_input("Mật khẩu", type="password")
+            nut_dang_nhap = st.form_submit_button("Đăng Nhập")
             
-            if submit:
-                role, hoten = login(db, username, password)
+            if nut_dang_nhap:
+                vai_tro, ho_ten = kiem_tra_dang_nhap(db, nhap_ten, nhap_mat_khau)
                 
-                # [MỚI] Xử lý trường hợp đã thi rồi
-                if role == "LOCKED":
-                    st.error("⛔ TÀI KHOẢN NÀY ĐÃ THI XONG!\nBạn chỉ được phép làm bài 1 lần duy nhất.")
-                
-                elif role:
-                    st.session_state['role'] = role
-                    st.session_state['user'] = username
-                    st.session_state['hoten'] = hoten
-                    st.session_state['current_index'] = 0
-                    st.session_state['score'] = 0
-                    st.session_state['questions'] = []
-                    st.session_state['submitted_answer'] = False
-                    st.session_state['end_time_question'] = None
+                if vai_tro == "DA_KHOA":
+                    st.error("⛔ TÀI KHOẢN ĐÃ BỊ KHÓA!\nBạn đã hoàn thành bài thi này rồi.")
+                elif vai_tro:
+                    # Lưu thông tin vào phiên làm việc
+                    st.session_state['vai_tro'] = vai_tro
+                    st.session_state['ten_dang_nhap'] = nhap_ten
+                    st.session_state['ho_ten'] = ho_ten
+                    
+                    # Đặt lại các chỉ số về 0
+                    st.session_state['chi_so_cau_hien_tai'] = 0
+                    st.session_state['diem_so'] = 0
+                    st.session_state['danh_sach_cau_hoi'] = []
+                    st.session_state['da_nop_cau_nay'] = False
+                    st.session_state['thoi_gian_ket_thuc_cau'] = None
                     st.rerun()
                 else:
                     st.error("❌ Sai tên đăng nhập hoặc mật khẩu!")
 
     # ==========================================
-    # 2. GIAO DIỆN ADMIN
+    # 2. GIAO DIỆN QUẢN TRỊ (ADMIN)
     # ==========================================
-    elif st.session_state['role'] == 'admin':
-        st.sidebar.markdown(f"👤 Admin: **{st.session_state['hoten']}**")
+    elif st.session_state['vai_tro'] == 'admin':
+        st.sidebar.markdown(f"👤 Quản trị viên: **{st.session_state['ho_ten']}**")
         if st.sidebar.button("Đăng xuất"):
-            st.session_state['role'] = None
+            st.session_state['vai_tro'] = None
             st.rerun()
         
         st.header("⚙️ Thêm Câu Hỏi Mới")
-        with st.form("them_cau_hoi"):
-            q = st.text_input("Câu hỏi")
-            col1, col2 = st.columns(2)
-            with col1:
-                a = st.text_input("Đáp án A")
-                b = st.text_input("Đáp án B")
-            with col2:
-                c = st.text_input("Đáp án C")
-                d = st.text_input("Đáp án D")
-            correct = st.selectbox("Đáp án ĐÚNG", ["A", "B", "C", "D"])
-            explain = st.text_area("Lời giải thích")
+        with st.form("form_them_cau_hoi"):
+            cau_hoi = st.text_input("Nội dung câu hỏi")
+            cot1, cot2 = st.columns(2)
+            with cot1:
+                da_a = st.text_input("Đáp án A")
+                da_b = st.text_input("Đáp án B")
+            with cot2:
+                da_c = st.text_input("Đáp án C")
+                da_d = st.text_input("Đáp án D")
+            
+            dap_an_dung = st.selectbox("Đáp án ĐÚNG", ["A", "B", "C", "D"])
+            giai_thich = st.text_area("Lời giải thích chi tiết")
             
             if st.form_submit_button("Lưu câu hỏi"):
                 try:
-                    ws = db.worksheet("Questions")
-                    ws.append_row([q, a, b, c, d, correct, explain])
-                    st.success("✅ Đã lưu thành công!")
-                except Exception as e:
-                    st.error(f"Lỗi: {e}")
+                    trang_cau_hoi = db.worksheet("CauHoi")
+                    # Lưu vào các cột theo đúng thứ tự
+                    trang_cau_hoi.append_row([cau_hoi, da_a, da_b, da_c, da_d, dap_an_dung, giai_thich])
+                    st.success("✅ Đã thêm câu hỏi thành công!")
+                except Exception as loi:
+                    st.error(f"Lỗi khi lưu: {loi}")
 
     # ==========================================
     # 3. GIAO DIỆN HỌC VIÊN
     # ==========================================
-    elif st.session_state['role'] == 'student':
-        if not st.session_state['questions']:
+    elif st.session_state['vai_tro'] == 'hocvien':
+        # Tải câu hỏi nếu chưa có
+        if not st.session_state['danh_sach_cau_hoi']:
             try:
-                st.session_state['questions'] = get_questions(db)
-            except Exception as e:
-                st.error(f"Lỗi tải câu hỏi: {e}")
+                st.session_state['danh_sach_cau_hoi'] = lay_du_lieu_cau_hoi(db)
+            except Exception as loi:
+                st.error(f"Lỗi tải dữ liệu câu hỏi: {loi}")
                 st.stop()
         
-        questions = st.session_state['questions']
-        idx = st.session_state['current_index']
+        ds_cau_hoi = st.session_state['danh_sach_cau_hoi']
+        chi_so = st.session_state['chi_so_cau_hien_tai']
 
-        st.sidebar.markdown(f"👋 Xin chào: **{st.session_state['hoten']}**")
-        st.sidebar.metric("Điểm số", st.session_state['score'])
+        st.sidebar.markdown(f"👋 Xin chào: **{st.session_state['ho_ten']}**")
+        st.sidebar.metric("Điểm số", st.session_state['diem_so'])
         
-        # --- [QUAN TRỌNG] KẾT THÚC BÀI THI ---
-        if idx >= len(questions):
-            # 1. Lưu điểm
-            luu_diem(db, st.session_state['user'], st.session_state['score'], st.session_state['hoten'])
-            
-            # 2. [MỚI] KHÓA TÀI KHOẢN NGAY LẬP TỨC
-            khoa_tai_khoan(db, st.session_state['user'])
+        # --- XỬ LÝ KHI HẾT CÂU HỎI (NỘP BÀI) ---
+        if chi_so >= len(ds_cau_hoi):
+            # Lưu kết quả
+            ket_qua = luu_ket_qua(db, st.session_state['ten_dang_nhap'], st.session_state['diem_so'])
             
             st.balloons()
-            st.success(f"🎉 HOÀN THÀNH! Điểm số: {st.session_state['score']}/{len(questions)}")
-            st.warning("⚠️ Tài khoản của bạn đã được khóa để tránh thi lại.")
+            st.success(f"🎉 CHÚC MỪNG BẠN ĐÃ HOÀN THÀNH BÀI THI!")
+            st.markdown(f"### 🏆 Kết quả chung cuộc: {st.session_state['diem_so']} / {len(ds_cau_hoi)}")
             
-            time.sleep(4)
-            st.session_state['role'] = None
+            if ket_qua:
+                st.info("💾 Kết quả đã được lưu và tài khoản đã được khóa.")
+            else:
+                st.error("⚠️ Có lỗi khi lưu điểm. Vui lòng chụp màn hình gửi giáo viên.")
+
+            st.warning("Hệ thống sẽ tự động đăng xuất sau 5 giây...")
+            time.sleep(5)
+            st.session_state['vai_tro'] = None
             st.rerun()
             return
 
-        q_data = questions[idx]
+        # --- HIỂN THỊ CÂU HỎI HIỆN TẠI ---
+        du_lieu_cau_hoi = ds_cau_hoi[chi_so]
         
-        giai_thich = ""
-        possible_headers = ["GiaiThich", "Giải Thích", "Explain"]
-        for header in possible_headers:
-            if header in q_data:
-                giai_thich = str(q_data[header])
-                break
-        if not giai_thich: giai_thich = "Không có giải thích chi tiết."
+        # Lấy lời giải thích
+        loi_giai = ""
+        if 'GiaiThich' in du_lieu_cau_hoi:
+            loi_giai = str(du_lieu_cau_hoi['GiaiThich'])
+        else:
+            loi_giai = "Không có giải thích chi tiết."
 
-        st.subheader(f"Câu hỏi {idx + 1}:")
-        st.info(f"{q_data['CauHoi']}")
+        st.subheader(f"Câu hỏi số {chi_so + 1}:")
+        st.info(f"{du_lieu_cau_hoi['CauHoi']}")
 
-        if not st.session_state['submitted_answer']:
-            if st.session_state['end_time_question'] is None:
-                st.session_state['end_time_question'] = time.time() + THOI_GIAN_MOI_CAU
+        # --- TRƯỜNG HỢP A: ĐANG LÀM BÀI ---
+        if not st.session_state['da_nop_cau_nay']:
+            # Xử lý đồng hồ đếm ngược
+            if st.session_state['thoi_gian_ket_thuc_cau'] is None:
+                st.session_state['thoi_gian_ket_thuc_cau'] = time.time() + THOI_GIAN_MOI_CAU
             
-            time_left = st.session_state['end_time_question'] - time.time()
+            thoi_gian_con = st.session_state['thoi_gian_ket_thuc_cau'] - time.time()
             
-            if time_left <= 0:
-                st.session_state['submitted_answer'] = True
-                st.session_state['user_choice'] = None 
+            # Hết giờ tự động nộp
+            if thoi_gian_con <= 0:
+                st.session_state['da_nop_cau_nay'] = True
+                st.session_state['lua_chon_cua_hoc_vien'] = None 
                 st.rerun()
 
-            st.progress(max(0.0, min(1.0, time_left / THOI_GIAN_MOI_CAU)))
-            st.caption(f"⏱️ Còn lại: {int(time_left)} giây")
+            st.progress(max(0.0, min(1.0, thoi_gian_con / THOI_GIAN_MOI_CAU)))
+            st.caption(f"⏱️ Thời gian còn lại: {int(thoi_gian_con)} giây")
 
-            with st.form(key=f"form_{idx}"):
-                options = [f"A. {q_data['DapAn_A']}", f"B. {q_data['DapAn_B']}", f"C. {q_data['DapAn_C']}"]
-                if 'DapAn_D' in q_data and str(q_data['DapAn_D']).strip():
-                    options.append(f"D. {q_data['DapAn_D']}")
+            with st.form(key=f"form_cau_{chi_so}"):
+                cac_lua_chon = [
+                    f"A. {du_lieu_cau_hoi['DapAn_A']}", 
+                    f"B. {du_lieu_cau_hoi['DapAn_B']}", 
+                    f"C. {du_lieu_cau_hoi['DapAn_C']}"
+                ]
+                # Kiểm tra đáp án D có tồn tại không
+                if 'DapAn_D' in du_lieu_cau_hoi and str(du_lieu_cau_hoi['DapAn_D']).strip():
+                    cac_lua_chon.append(f"D. {du_lieu_cau_hoi['DapAn_D']}")
 
-                choice = st.radio("Chọn đáp án:", options, index=None)
-                if st.form_submit_button("Chốt đáp án"):
-                    if choice:
-                        st.session_state['user_choice'] = choice.split(".")[0]
-                        st.session_state['submitted_answer'] = True
+                chon = st.radio("Chọn đáp án của bạn:", cac_lua_chon, index=None)
+                
+                if st.form_submit_button("Chốt Đáp Án"):
+                    if chon:
+                        st.session_state['lua_chon_cua_hoc_vien'] = chon.split(".")[0] # Lấy A,B,C,D
+                        st.session_state['da_nop_cau_nay'] = True
                         st.rerun()
                     else:
-                        st.warning("⚠️ Vui lòng chọn đáp án!")
+                        st.warning("⚠️ Vui lòng chọn một đáp án!")
 
             time.sleep(1)
             st.rerun()
-        else:
-            user_ans = st.session_state['user_choice']
-            correct_ans = str(q_data['DapAn_Dung']).strip().upper()
-            is_correct = (user_ans == correct_ans)
 
-            if is_correct:
-                st.success(f"✅ CHÍNH XÁC!\n\n💡 {giai_thich}")
-            elif user_ans is None:
-                st.error(f"⌛ HẾT GIỜ!\n\n👉 Đáp án đúng: {correct_ans}\n\n💡 {giai_thich}")
+        # --- TRƯỜNG HỢP B: ĐÃ TRẢ LỜI (HIỆN KẾT QUẢ) ---
+        else:
+            lua_chon = st.session_state['lua_chon_cua_hoc_vien']
+            dap_an_dung = str(du_lieu_cau_hoi['DapAn_Dung']).strip().upper()
+            dung_hay_sai = (lua_chon == dap_an_dung)
+
+            if dung_hay_sai:
+                st.success(f"✅ CHÍNH XÁC!\n\n💡 **Giải thích:** {loi_giai}")
+            elif lua_chon is None:
+                st.error(f"⌛ HẾT GIỜ!\n\n👉 Đáp án đúng là: **{dap_an_dung}**\n\n💡 **Giải thích:** {loi_giai}")
             else:
-                st.error(f"❌ SAI RỒI (Bạn chọn {user_ans})\n\n👉 Đáp án đúng: {correct_ans}\n\n💡 {giai_thich}")
+                st.error(f"❌ SAI RỒI (Bạn chọn {lua_chon})\n\n👉 Đáp án đúng là: **{dap_an_dung}**\n\n💡 **Giải thích:** {loi_giai}")
 
             if st.button("Câu tiếp theo ➡️"):
-                if is_correct: st.session_state['score'] += 1
-                st.session_state['current_index'] += 1
-                st.session_state['submitted_answer'] = False
-                st.session_state['user_choice'] = None
-                st.session_state['end_time_question'] = None
+                if dung_hay_sai:
+                    st.session_state['diem_so'] += 1
+                
+                # Reset trạng thái cho câu mới
+                st.session_state['chi_so_cau_hien_tai'] += 1
+                st.session_state['da_nop_cau_nay'] = False
+                st.session_state['lua_chon_cua_hoc_vien'] = None
+                st.session_state['thoi_gian_ket_thuc_cau'] = None
                 st.rerun()
 
 if __name__ == "__main__":
