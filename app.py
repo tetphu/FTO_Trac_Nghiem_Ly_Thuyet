@@ -61,7 +61,7 @@ def luu_ket_qua(db, user, diem):
 
 # --- GIAO DIỆN CHÍNH ---
 def main():
-    st.set_page_config(page_title="GCPD System", page_icon="🚓", layout="centered")
+    st.set_page_config(page_title="FTO GCPD", page_icon="🚓", layout="centered")
 
     # --- CSS: STYLE CHO FORM NHƯ THẺ HỒ SƠ ---
     st.markdown("""
@@ -151,21 +151,21 @@ def main():
             # --- PHẦN HEADER ĐƯỢC ĐƯA VÀO TRONG FORM ---
             c1, c2 = st.columns([1, 2.5])
             with c1:
-                st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=140)
+                st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=200)
             with c2:
-                st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
+                st.markdown('<div class="gcpd-title">GACHA CITY POLICE DEPARTMENT</div>', unsafe_allow_html=True)
             
             st.divider() # Đường kẻ ngăn cách
             
             # --- PHẦN NHẬP LIỆU ---
-            st.markdown("### ▼ XÁC THỰC DANH TÍNH")
-            u = st.text_input("SỐ HIỆU (USER)")
-            p = st.text_input("MÃ BẢO MẬT (PASS)", type="password")
+            st.markdown("### ▼ XÁC THỰC DANH TÍNH SĨ QUAN")
+            u = st.text_input("SỐ HIỆU ( Nhập Số momo )")
+            p = st.text_input("MÃ BẢO MẬT ( Giảng Viên cung cấp )", type="password")
             st.write("")
             
             if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
                 vt, ten = kiem_tra_dang_nhap(db, u, p)
-                if vt == "DA_KHOA": st.error("⛔ HỒ SƠ ĐÃ KHÓA")
+                if vt == "DA_KHOA": st.error("⛔ SĨ QUAN ĐÃ THI XONG - HỒ SƠ ĐÃ KHÓA")
                 elif vt:
                     st.session_state.update(vai_tro=vt, user=u, ho_ten=ten, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False)
                     st.rerun()
@@ -332,4 +332,5 @@ def main():
         if st.button("QUAY LẠI"): st.session_state['vai_tro'] = None; st.rerun()
 
 if __name__ == "__main__":
+
     main()
