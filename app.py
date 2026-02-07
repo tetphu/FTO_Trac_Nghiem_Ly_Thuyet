@@ -20,7 +20,7 @@ def ket_noi_csdl():
         st.error(f"LỖI KẾT NỐI: {str(e)}")
         return None
 
-# --- XỬ LÝ ĐĂNG NHẬP (CHẤP NHẬN CẢ ADMIN/STUDENT CŨ) ---
+# --- XỬ LÝ ĐĂNG NHẬP (TỰ ĐỘNG MAP ROLE) ---
 def kiem_tra_dang_nhap(db, user, pwd):
     try:
         ws = db.worksheet("HocVien")
@@ -34,17 +34,16 @@ def kiem_tra_dang_nhap(db, user, pwd):
                 status = str(row[4]).strip() if len(row) > 4 else ""
                 if status == 'DaThi': return "DA_KHOA", None
                 
-                # Lấy vai trò gốc từ Sheet
-                role_raw = str(row[2]).strip()
+                # Xử lý vai trò linh hoạt (admin/student hoặc GiangVien/hocvien đều được)
+                role_goc = str(row[2]).strip()
                 name = str(row[3]).strip()
                 
-                # Chuẩn hóa vai trò để code hiểu
-                if role_raw in ['admin', 'GiangVien']:
+                if role_goc in ['admin', 'GiangVien']:
                     return 'GiangVien', name
-                elif role_raw in ['student', 'hocvien']:
+                elif role_goc in ['student', 'hocvien']:
                     return 'hocvien', name
                 
-                return role_raw, name
+                return role_goc, name
     except Exception as e:
         st.error(f"Lỗi dữ liệu: {e}")
     return None, None
@@ -63,31 +62,32 @@ def luu_ket_qua(db, user, diem):
 def main():
     st.set_page_config(page_title="GCPD System", page_icon="🚓", layout="centered")
 
-    # --- CSS SẠCH SẼ (ĐÃ KIỂM TRA CÚ PHÁP) ---
+    # CSS (ĐÃ SỬA LỖI TRIPLE QUOTE)
     st.markdown("""
         <style>
-        .block-container { padding-top: 2rem; padding-bottom: 5rem; max-width: 800px; }
+        .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 800px; }
         header, footer { visibility: hidden; }
         .stApp { background-color: #ffffff; }
         
-        /* HEADER */
+        /* HEADER STYLE */
         .gcpd-title {
             font-family: 'Arial Black', sans-serif;
             color: #002147; 
             font-size: 32px;
             text-transform: uppercase;
-            margin-top: 10px;
+            margin-top: 15px;
             line-height: 1.2;
             font-weight: 900;
         }
         
-        /* KHUNG VIỀN CHO FORM */
-        .form-border {
+        /* KHUNG VIỀN FORM */
+        .form-box {
             border: 2px solid #002147;
             border-radius: 8px;
-            padding: 20px;
-            margin-top: 10px;
+            padding: 30px;
             background-color: #f8f9fa;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         /* INPUT & BUTTON */
@@ -104,9 +104,9 @@ def main():
             border: none !important;
             font-weight: bold !important;
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             text-transform: uppercase;
-            margin-top: 5px;
+            margin-top: 10px;
         }
         .stButton button:hover { background-color: #003366 !important; }
         
@@ -142,10 +142,10 @@ def main():
     db = ket_noi_csdl()
     if not db: st.stop()
 
-    # --- HEADER (LOGO + TEXT) ---
+    # --- HEADER (KHÔNG CÓ KHUNG) ---
     col1, col2 = st.columns([1, 2.5])
     with col1:
-        st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=200)
+        st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=220)
     with col2:
         st.markdown('<div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>', unsafe_allow_html=True)
     st.write("")
@@ -154,22 +154,20 @@ def main():
     # 1. ĐĂNG NHẬP
     # ==========================================
     if st.session_state['vai_tro'] is None:
-        # Bọc Form bằng container có style riêng, không dùng div rỗng
-        with st.container():
-            st.markdown('<div class="form-border">', unsafe_allow_html=True)
-            st.subheader("▼ XÁC THỰC DANH TÍNH")
-            with st.form("login"):
-                u = st.text_input("SỐ HIỆU (USER)")
-                p = st.text_input("MÃ BẢO MẬT (PASS)", type="password")
-                st.write("")
-                if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
-                    vt, ten = kiem_tra_dang_nhap(db, u, p)
-                    if vt == "DA_KHOA": st.error("⛔ HỒ SƠ ĐÃ KHÓA")
-                    elif vt:
-                        st.session_state.update(vai_tro=vt, user=u, ho_ten=ten, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False)
-                        st.rerun()
-                    else: st.error("❌ SAI THÔNG TIN")
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="form-box">', unsafe_allow_html=True)
+        st.subheader("▼ XÁC THỰC DANH TÍNH")
+        with st.form("login"):
+            u = st.text_input("SỐ HIỆU (USER)")
+            p = st.text_input("MÃ BẢO MẬT (PASS)", type="password")
+            st.write("")
+            if st.form_submit_button("TRUY CẬP HỆ THỐNG"):
+                vt, ten = kiem_tra_dang_nhap(db, u, p)
+                if vt == "DA_KHOA": st.error("⛔ HỒ SƠ ĐÃ KHÓA")
+                elif vt:
+                    st.session_state.update(vai_tro=vt, user=u, ho_ten=ten, chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, bat_dau=False)
+                    st.rerun()
+                else: st.error("❌ SAI THÔNG TIN")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # 2. GIẢNG VIÊN
@@ -178,7 +176,7 @@ def main():
         st.sidebar.markdown(f"**CHỈ HUY:** {st.session_state['ho_ten']}")
         if st.sidebar.button("ĐĂNG XUẤT"): st.session_state['vai_tro'] = None; st.rerun()
         
-        st.markdown('<div class="form-border">', unsafe_allow_html=True)
+        st.markdown('<div class="form-box">', unsafe_allow_html=True)
         st.subheader("CẬP NHẬT DỮ LIỆU")
         with st.form("add"):
             q = st.text_input("NỘI DUNG CÂU HỎI")
@@ -203,16 +201,18 @@ def main():
         
         # --- MÀN HÌNH CHỜ ---
         if not st.session_state['bat_dau']:
-            st.markdown('<div class="form-border" style="text-align:center; padding:40px;">', unsafe_allow_html=True)
-            st.markdown('<h3 style="color:#002147;">Đã sẵn sàng chưa nào!</h3>', unsafe_allow_html=True)
-            st.markdown('<p style="font-weight:bold;">Chúc Sĩ Quan thi tốt</p>', unsafe_allow_html=True)
+            st.markdown('<div class="form-box" style="text-align:center;">', unsafe_allow_html=True)
+            st.markdown("""
+                <h3 style="color:#002147;">Đã sẵn sàng chưa nào!</h3>
+                <p style="font-size:18px; font-weight:bold; color:#333;">Chúc Sĩ Quan thi tốt</p>
+            """, unsafe_allow_html=True)
             if st.button("BẮT ĐẦU THI"):
                 st.session_state['bat_dau'] = True
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             return
 
-        # --- TẢI CÂU HỎI ---
+        # --- TẢI DỮ LIỆU ---
         if not st.session_state['ds_cau_hoi']:
             try:
                 raw = db.worksheet("CauHoi").get_all_values()
@@ -226,7 +226,7 @@ def main():
         # --- KẾT THÚC ---
         if idx >= len(ds):
             st.balloons()
-            st.markdown('<div class="form-border" style="text-align:center;">', unsafe_allow_html=True)
+            st.markdown('<div class="form-box" style="text-align:center;">', unsafe_allow_html=True)
             st.markdown('<h2 style="color:#002147;">✅ NHIỆM VỤ HOÀN TẤT</h2>', unsafe_allow_html=True)
             st.markdown("""
                 <p style="font-weight:bold; margin:20px;">
@@ -248,9 +248,8 @@ def main():
         cau = ds[idx]
         while len(cau) < 7: cau.append("")
 
-        st.markdown('<div class="form-border">', unsafe_allow_html=True)
+        st.markdown('<div class="form-box">', unsafe_allow_html=True)
         
-        # Logic thời gian
         if not st.session_state['da_nop_cau']:
             if st.session_state['thoi_gian_het'] is None: 
                 st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -304,5 +303,10 @@ def main():
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     
+    # --- LỖI VAI TRÒ ---
     else:
-        st.error(f"LỖI VAI TRÒ: {st.session_state['
+        st.error(f"LỖI VAI TRÒ: {st.session_state['vai_tro']}")
+        if st.button("QUAY LẠI"): st.session_state['vai_tro'] = None; st.rerun()
+
+if __name__ == "__main__":
+    main()
