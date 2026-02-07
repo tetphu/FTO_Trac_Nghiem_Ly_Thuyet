@@ -9,9 +9,10 @@ THOI_GIAN_MOI_CAU = 30  # Số giây đếm ngược
 
 # --- KẾT NỐI GOOGLE SHEET ---
 def ket_noi_csdl():
+    # Khai báo phạm vi quyền truy cập
     pham_vi = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Kiểm tra xem chạy trên Cloud hay Máy cá nhân
+    # Kiểm tra chạy trên Cloud hay Local
     if "gcp_service_account" in st.secrets:
         creds_dict = st.secrets["gcp_service_account"]
         chung_chi = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, pham_vi)
@@ -25,21 +26,21 @@ def ket_noi_csdl():
 def kiem_tra_dang_nhap(bang_tinh, user, pwd):
     try:
         ws = bang_tinh.worksheet("HocVien")
-        # Lấy tất cả dữ liệu (bao gồm cả dòng tiêu đề)
+        # Lấy tất cả dữ liệu
         tat_ca_dong = ws.get_all_values()
         
-        # Bỏ qua dòng tiêu đề (dòng 1), bắt đầu duyệt từ dòng 2
+        # Duyệt từ dòng 2 (bỏ dòng tiêu đề)
         for dong in tat_ca_dong[1:]:
-            # Kiểm tra dòng có đủ dữ liệu không (tránh lỗi index out of range)
-            if len(dong) < 4: continue
+            # Kiểm tra dòng đủ dữ liệu không
+            if len(dong) < 4:
+                continue
 
-            # Cột 1 (Index 0): Tên đăng nhập
-            # Cột 2 (Index 1): Mật khẩu
+            # Cột 1: Tên đăng nhập | Cột 2: Mật khẩu
             u_sheet = str(dong[0]).strip()
             p_sheet = str(dong[1]).strip()
             
             if u_sheet == str(user).strip() and p_sheet == str(pwd).strip():
-                # Cột 5 (Index 4): Trạng thái (DaThi)
+                # Cột 5: Trạng thái (DaThi)
                 trang_thai = ""
                 if len(dong) > 4: 
                     trang_thai = str(dong[4]).strip()
@@ -47,7 +48,7 @@ def kiem_tra_dang_nhap(bang_tinh, user, pwd):
                 if trang_thai == 'DaThi':
                     return "DA_KHOA", None
                 
-                # Cột 3 (Index 2): Vai trò | Cột 4 (Index 3): Họ tên
+                # Cột 3: Vai trò | Cột 4: Họ tên
                 return dong[2], dong[3]
                 
     except Exception as e:
@@ -68,17 +69,213 @@ def luu_ket_qua(bang_tinh, user, diem):
         st.error(f"Lỗi lưu kết quả: {e}")
         return False
 
-# --- LẤY CÂU HỎI (DỰA VÀO VỊ TRÍ CỘT) ---
+# --- LẤY CÂU HỎI ---
 def lay_ds_cau_hoi(bang_tinh):
     ws = bang_tinh.worksheet("CauHoi")
     tat_ca = ws.get_all_values()
-    # Bỏ dòng tiêu đề (dòng 1), chỉ lấy dữ liệu
+    # Bỏ dòng tiêu đề, chỉ lấy dữ liệu
     return tat_ca[1:]
 
 # --- GIAO DIỆN CHÍNH ---
 def main():
     st.set_page_config(page_title="Thi Trắc Nghiệm Online", page_icon="📝")
-    st.markdown("""
+    
+    # CSS làm đẹp giao diện (Đã kiểm tra kỹ dấu ngoặc)
+    st.markdown(
+        """
         <style>
         .stAlert { padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;}
-        .stButton button { width: 100%; margin
+        .stButton button { width: 100%; margin-top: 10px; font-weight: bold; font-size: 16px;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    try:
+        db = ket_noi_csdl()
+    except Exception as e:
+        st.error(f"❌ Lỗi kết nối Google Sheet: {e}")
+        st.stop()
+
+    # Khởi tạo Session State
+    if 'vai_tro' not in st.session_state: st.session_state['vai_tro'] = None
+    if 'chi_so' not in st.session_state: st.session_state['chi_so'] = 0
+    if 'diem_so' not in st.session_state: st.session_state['diem_so'] = 0
+    if 'ds_cau_hoi' not in st.session_state: st.session_state['ds_cau_hoi'] = []
+    if 'da_nop_cau' not in st.session_state: st.session_state['da_nop_cau'] = False
+    if 'lua_chon' not in st.session_state: st.session_state['lua_chon'] = None
+    if 'thoi_gian_het' not in st.session_state: st.session_state['thoi_gian_het'] = None
+
+    # ==========================================
+    # 1. MÀN HÌNH ĐĂNG NHẬP
+    # ==========================================
+    if st.session_state['vai_tro'] is None:
+        st.title("🎓 Đăng Nhập Hệ Thống")
+        with st.form("form_login"):
+            u = st.text_input("Tên đăng nhập")
+            p = st.text_input("Mật khẩu", type="password")
+            btn = st.form_submit_button("Đăng Nhập")
+            
+            if btn:
+                vai_tro, ho_ten = kiem_tra_dang_nhap(db, u, p)
+                if vai_tro == "DA_KHOA":
+                    st.error("⛔ Tài khoản này đã thi xong và bị khóa!")
+                elif vai_tro:
+                    st.session_state['vai_tro'] = str(vai_tro).strip()
+                    st.session_state['user'] = u
+                    st.session_state['ho_ten'] = ho_ten
+                    # Reset trạng thái
+                    st.session_state['chi_so'] = 0
+                    st.session_state['diem_so'] = 0
+                    st.session_state['ds_cau_hoi'] = []
+                    st.session_state['da_nop_cau'] = False
+                    st.session_state['lua_chon'] = None
+                    st.session_state['thoi_gian_het'] = None
+                    st.rerun()
+                else:
+                    st.error("❌ Sai tên đăng nhập hoặc mật khẩu")
+
+    # ==========================================
+    # 2. GIAO DIỆN ADMIN
+    # ==========================================
+    elif st.session_state['vai_tro'] == 'admin':
+        st.sidebar.markdown(f"👤 Admin: **{st.session_state['ho_ten']}**")
+        if st.sidebar.button("Đăng xuất"):
+            st.session_state['vai_tro'] = None
+            st.rerun()
+        
+        st.header("⚙️ Thêm Câu Hỏi Mới")
+        with st.form("form_them_cau"):
+            # Cột 1
+            q = st.text_input("Nội dung câu hỏi (Cột 1)")
+            c1, c2 = st.columns(2)
+            # Cột 2, 3
+            a = c1.text_input("Đáp án A (Cột 2)")
+            b = c1.text_input("Đáp án B (Cột 3)")
+            # Cột 4, 5
+            c = c2.text_input("Đáp án C (Cột 4)")
+            d = c2.text_input("Đáp án D (Cột 5)")
+            # Cột 6, 7
+            dung = st.selectbox("Đáp án đúng (Cột 6)", ["A", "B", "C", "D"])
+            giai_thich = st.text_area("Giải thích (Cột 7)")
+            
+            if st.form_submit_button("Lưu câu hỏi"):
+                try:
+                    ws = db.worksheet("CauHoi")
+                    ws.append_row([q, a, b, c, d, dung, giai_thich])
+                    st.success("✅ Đã lưu thành công!")
+                except Exception as e:
+                    st.error(f"Lỗi khi lưu: {e}")
+
+    # ==========================================
+    # 3. GIAO DIỆN HỌC VIÊN
+    # ==========================================
+    elif st.session_state['vai_tro'] == 'hocvien':
+        # Tải câu hỏi
+        if not st.session_state['ds_cau_hoi']:
+            try:
+                st.session_state['ds_cau_hoi'] = lay_ds_cau_hoi(db)
+            except Exception as e:
+                st.error(f"Lỗi tải câu hỏi: {e}")
+                st.stop()
+        
+        ds = st.session_state['ds_cau_hoi']
+        idx = st.session_state['chi_so']
+
+        if not ds:
+            st.warning("⚠️ Chưa có câu hỏi nào trong hệ thống.")
+            st.stop()
+
+        st.sidebar.markdown(f"👋 Xin chào: **{st.session_state['ho_ten']}**")
+        st.sidebar.metric("Điểm số", st.session_state['diem_so'])
+
+        # --- KẾT THÚC BÀI THI ---
+        if idx >= len(ds):
+            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
+            st.balloons()
+            st.success(f"🎉 HOÀN THÀNH! Điểm số: {st.session_state['diem_so']}/{len(ds)}")
+            st.info("Hệ thống sẽ đăng xuất sau vài giây...")
+            time.sleep(3)
+            st.session_state['vai_tro'] = None
+            st.rerun()
+            return
+
+        # --- HIỂN THỊ CÂU HỎI ---
+        cau = ds[idx]
+        
+        # Đảm bảo list đủ 7 phần tử
+        while len(cau) < 7:
+            cau.append("")
+            
+        noi_dung = cau[0] # Cột 1
+        da_a = cau[1]     # Cột 2
+        da_b = cau[2]     # Cột 3
+        da_c = cau[3]     # Cột 4
+        da_d = cau[4]     # Cột 5
+        dap_an_dung = str(cau[5]).strip().upper() # Cột 6
+        loi_giai = cau[6] # Cột 7
+
+        st.subheader(f"Câu hỏi {idx + 1}:")
+        st.info(noi_dung)
+
+        # --- LOGIC LÀM BÀI ---
+        if not st.session_state['da_nop_cau']:
+            # Khởi tạo đồng hồ
+            if st.session_state['thoi_gian_het'] is None:
+                st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
+            
+            con_lai = st.session_state['thoi_gian_het'] - time.time()
+            
+            # Hết giờ tự động nộp
+            if con_lai <= 0:
+                st.session_state['da_nop_cau'] = True
+                st.session_state['lua_chon'] = None
+                st.rerun()
+
+            # Thanh tiến trình
+            st.progress(max(0.0, min(1.0, con_lai / THOI_GIAN_MOI_CAU)))
+            
+            # Dòng này đã được sửa lỗi cú pháp cẩn thận
+            st.caption(f"⏱️ Còn lại: {int(con_lai)} giây")
+
+            with st.form(f"form_thi_{idx}"):
+                opts = [f"A. {da_a}", f"B. {da_b}", f"C. {da_c}"]
+                if str(da_d).strip(): 
+                    opts.append(f"D. {da_d}")
+                
+                chon = st.radio("Chọn đáp án:", opts, index=None)
+                if st.form_submit_button("Chốt đáp án"):
+                    if chon:
+                        st.session_state['lua_chon'] = chon.split(".")[0]
+                        st.session_state['da_nop_cau'] = True
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Vui lòng chọn một đáp án!")
+            
+            time.sleep(1) 
+            st.rerun()
+
+        # --- XEM KẾT QUẢ ---
+        else:
+            nguoi_chon = st.session_state['lua_chon']
+            dung = (nguoi_chon == dap_an_dung)
+
+            if dung:
+                st.success(f"✅ CHÍNH XÁC!\n\n💡 {loi_giai}")
+            elif nguoi_chon is None:
+                st.error(f"⌛ HẾT GIỜ!\n\n👉 Đáp án đúng: {dap_an_dung}\n\n💡 {loi_giai}")
+            else:
+                st.error(f"❌ SAI RỒI! (Bạn chọn {nguoi_chon})\n\n👉 Đáp án đúng: {dap_an_dung}\n\n💡 {loi_giai}")
+
+            if st.button("Câu tiếp theo ➡️"):
+                if dung: st.session_state['diem_so'] += 1
+                
+                # Reset sang câu mới
+                st.session_state['chi_so'] += 1
+                st.session_state['da_nop_cau'] = False
+                st.session_state['lua_chon'] = None
+                st.session_state['thoi_gian_het'] = None
+                st.rerun()
+
+if __name__ == "__main__":
+    main()
