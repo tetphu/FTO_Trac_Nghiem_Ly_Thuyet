@@ -74,7 +74,7 @@ def main():
         .gcpd-title {
             font-family: 'Arial Black', sans-serif;
             color: #002147; 
-            font-size: 24px;
+            font-size: 35px;
             text-transform: uppercase;
             margin-top: 10px;
             line-height: 1.2;
@@ -334,3 +334,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
