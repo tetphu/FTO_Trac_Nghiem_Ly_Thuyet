@@ -18,7 +18,7 @@ def ket_noi_csdl():
         khach_hang = gspread.authorize(chung_chi)
         return khach_hang.open("HeThongTracNghiem")
     except Exception as e:
-        st.error(f"Lỗi kết nối hệ thống dữ liệu GCPD: {str(e)}")
+        st.error(f"SYSTEM ERROR: Connection failed. {str(e)}")
         return None
 
 # --- XỬ LÝ ĐĂNG NHẬP ---
@@ -35,7 +35,7 @@ def kiem_tra_dang_nhap(bang_tinh, user, pwd):
                 if trang_thai == 'DaThi': return "DA_KHOA", None
                 return str(dong[2]).strip(), str(dong[3]).strip()
     except Exception as e:
-        st.error(f"Lỗi truy xuất hồ sơ: {str(e)}")
+        st.error(f"DATA RETRIEVAL ERROR: {str(e)}")
     return None, None
 
 # --- LƯU KẾT QUẢ ---
@@ -53,113 +53,127 @@ def lay_ds_cau_hoi(bang_tinh):
     return bang_tinh.worksheet("CauHoi").get_all_values()[1:]
 
 # =============================================
-# --- GIAO DIỆN CHÍNH (GCPD PRO THEME V2) ---
+# --- GIAO DIỆN: AMERICAN PD STYLE ---
 # =============================================
 def main():
-    st.set_page_config(page_title="GCPD Training System", page_icon="👮‍♂️", layout="centered")
+    st.set_page_config(page_title="GCPD POLICE DEPT", page_icon="🚓", layout="centered")
     
-    # --- CSS TÙY CHỈNH (NỀN TRẮNG - KHUNG XANH) ---
+    # --- CSS: TẠO KHUNG BAO BỌC VÀ PHONG CÁCH MỸ ---
     st.markdown("""
         <style>
-        /* 1. NỀN CHÍNH (BÊN NGOÀI): Màu trắng giấy hồ sơ */
+        /* 1. NỀN TỔNG THỂ: Màu xám xi măng tối (Đường phố/Sở cảnh sát) */
         .stApp {
-            background-color: #ffffff; 
-            color: #0a192f; /* Chữ màu xanh đen đậm để dễ đọc trên nền trắng */
+            background-color: #2c3e50;
+            background-image: radial-gradient(#34495e 15%, transparent 16%), radial-gradient(#34495e 15%, transparent 16%);
+            background-size: 20px 20px;
         }
 
-        /* 2. LOGO & TIÊU ĐỀ (BÊN NGOÀI) */
+        /* 2. KHUNG BAO BỌC CHÍNH (THE FRAME) */
+        .pd-frame {
+            background-color: #ffffff;
+            border: 8px solid #002147; /* Xanh Navy Cảnh sát Mỹ */
+            border-top: 20px solid #002147; /* Thanh tiêu đề dày phía trên */
+            border-bottom: 8px solid #FFD700; /* Viền vàng phía dưới (Huy hiệu) */
+            border-radius: 4px;
+            padding: 30px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); /* Đổ bóng sâu */
+            margin-top: 20px;
+            position: relative;
+        }
+
+        /* Trang trí: Dòng chữ POLICE DEPT chìm */
+        .pd-frame::before {
+            content: "OFFICIAL USE ONLY";
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        /* 3. TYPOGRAPHY (FONT CHỮ) */
         h1, h2, h3 {
-            font-family: 'Arial Black', sans-serif;
-            color: #0a192f !important; /* Tiêu đề bên ngoài màu đậm */
+            font-family: 'Impact', 'Arial Black', sans-serif !important;
             text-transform: uppercase;
+            color: #002147 !important; /* Xanh Navy */
+            letter-spacing: 1px;
         }
         
-        /* 3. KHUNG GCPD (BÊN TRONG): Giữ nguyên màu xanh cảnh sát */
-        .gcpd-container {
-            background-color: #0a192f; /* Nền xanh Navy đậm */
-            color: #e6f1ff; /* Chữ trắng sáng bên trong khung */
-            border: 3px solid #1d3f72; /* Viền xanh */
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4); /* Đổ bóng mạnh cho nổi bật */
-            margin-bottom: 25px;
-        }
-
-        /* Chỉnh màu tiêu đề KHI NẰM TRONG KHUNG GCPD thành màu sáng */
-        .gcpd-container h1, .gcpd-container h2, .gcpd-container h3, .gcpd-container h4 {
-            color: #64ffda !important; /* Xanh ngọc Neon */
-            text-shadow: 0px 0px 5px rgba(100, 255, 218, 0.3);
-        }
-
-        /* 4. INPUT FIELDS (Chỉ ảnh hưởng bên trong khung) */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
-            background-color: #172a45 !important; /* Nền input tối */
-            color: #ffffff !important; /* Chữ trắng */
-            border: 1px solid #305cde !important; /* Viền xanh sáng */
-        }
-        .stTextInput label, .stSelectbox label, .stTextArea label {
-            color: #ccd6f6 !important; /* Màu nhãn (Label) sáng */
+        h4, h5, p, label {
+            font-family: 'Courier New', monospace; /* Font kiểu máy đánh chữ hồ sơ */
             font-weight: bold;
+            color: #333;
         }
 
-        /* 5. NÚT BẤM (BUTTONS) */
+        /* 4. INPUT FIELD (O NHAP LIEU) */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
+            border: 2px solid #002147 !important;
+            border-radius: 0px !important; /* Vuông vức */
+            background-color: #f4f4f4 !important;
+            color: #000 !important;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 5. BUTTON (NÚT BẤM) */
         .stButton button {
-            background-color: #0056b3 !important; /* Xanh cảnh sát */
-            color: white !important;
-            font-weight: bold !important;
-            border: 2px solid #004494 !important;
-            border-radius: 6px !important;
-            padding: 10px 24px !important;
+            background-color: #002147 !important; /* Xanh Navy */
+            color: #FFD700 !important; /* Chữ Vàng */
+            border: 2px solid #FFD700 !important;
+            border-radius: 2px !important;
+            font-weight: 900 !important;
             text-transform: uppercase;
-            width: 100%;
-            transition: 0.3s;
+            letter-spacing: 1px;
+            padding: 12px 24px;
+            transition: 0.2s;
         }
         .stButton button:hover {
             background-color: #003366 !important;
-            border-color: #64ffda !important; /* Hover hiện viền xanh ngọc */
-            transform: scale(1.02);
+            box-shadow: 0 0 10px #FFD700;
         }
 
-        /* 6. RADIO BUTTONS (Trắc nghiệm) */
-        .stRadio > div {
-            background-color: transparent; 
-        }
-        .stRadio label {
-            color: #e6f1ff !important; /* Màu chữ đáp án sáng */
-            font-size: 16px !important;
-        }
-
-        /* 7. SIDEBAR */
+        /* 6. SIDEBAR (THANH BÊN) */
         [data-testid="stSidebar"] {
-            background-color: #f0f2f6; /* Sidebar màu xám sáng cho đồng bộ nền trắng */
-            border-right: 1px solid #ddd;
+            background-color: #001529; /* Rất tối */
+            border-right: 4px solid #FFD700;
         }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-             color: #0a192f !important;
+            color: #FFD700 !important; /* Chữ vàng trên nền tối */
         }
-        [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
-             color: #333 !important;
+        [data-testid="stSidebar"] .stMarkdown {
+            color: #fff !important;
         }
-        
-        /* 8. THÔNG BÁO (Alerts) */
+
+        /* 7. RADIO BUTTON */
+        .stRadio div[role="radiogroup"] > label {
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-left: 5px solid #002147;
+            margin-bottom: 5px;
+            color: #000 !important;
+        }
+
+        /* 8. ALERT/THÔNG BÁO */
         .stAlert {
-            background-color: #e6fffa; /* Nền thông báo sáng */
-            color: #0a192f;
-            border: 1px solid #0a192f;
+            background-color: #ffeb3b;
+            color: black;
+            border: 3px solid black;
+            font-weight: bold;
+            text-transform: uppercase;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- Header Logo & Tiêu đề (Nền trắng, Chữ đậm) ---
+    # --- Header Logo & Tiêu đề ---
+    # Đặt bên ngoài khung để tạo header trang web
     col1, col2 = st.columns([1, 4])
     with col1:
-        # LOGO MỚI TỪ GITHUB
-        st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=110)
+        st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=120)
     with col2:
-        st.markdown("<h1 style='margin-bottom:0; padding-top:10px;'>GCPD GACHA CITY</h1>", unsafe_allow_html=True)
-        st.markdown("<h4 style='color:#555;'>Hệ Thống Đào Tạo & Sát Hạch Nghiệp Vụ</h4>", unsafe_allow_html=True)
-    
-    st.markdown("---") # Đường kẻ ngang phân cách
+        st.markdown("<h1 style='color:#FFD700 !important; text-shadow: 2px 2px #000;'>GCPD DEPARTMENT</h1>", unsafe_allow_html=True)
+        st.markdown("<h5 style='color:#FFF !important;'>LAW ENFORCEMENT TRAINING DIVISION</h5>", unsafe_allow_html=True)
 
     # Khởi tạo
     db = ket_noi_csdl()
@@ -177,88 +191,98 @@ def main():
     # ==========================================
     if st.session_state['vai_tro'] is None:
         
-        col_space1, col_center, col_space2 = st.columns([1, 6, 1])
-        with col_center:
-            # Bắt đầu khung GCPD
-            st.markdown('<div class="gcpd-container">', unsafe_allow_html=True)
-            st.markdown("<h3 style='text-align:center;'>🛡️ CỔNG AN NINH</h3>", unsafe_allow_html=True)
-            st.write("Hệ thống yêu cầu xác thực danh tính sĩ quan trước khi truy cập.")
+        # --- BẮT ĐẦU KHUNG PD ---
+        st.markdown('<div class="pd-frame">', unsafe_allow_html=True)
+        
+        col_c1, col_c2 = st.columns([2,1])
+        with col_c1:
+            st.markdown("### AUTHORIZED LOGIN")
+            st.write("SECURE TERMINAL ACCESS // RESTRICTED AREA")
+        with col_c2:
+            st.image("https://cdn-icons-png.flaticon.com/512/2402/2402453.png", width=60) # Icon huy hiệu
             
-            with st.form("form_login"):
-                u = st.text_input("Mã định danh (User)", placeholder="Nhập mã số...")
-                p = st.text_input("Mã bảo mật (Pass)", type="password", placeholder="Nhập mật khẩu...")
-                st.markdown("<br>", unsafe_allow_html=True)
-                btn = st.form_submit_button("XÁC THỰC TRUY CẬP")
-                
-                if btn:
-                    vt, ten = kiem_tra_dang_nhap(db, u, p)
-                    if vt == "DA_KHOA":
-                        st.error("⛔ CẢNH BÁO: Hồ sơ này đã bị khóa sau khi hoàn tất sát hạch.")
-                    elif vt:
-                        st.session_state['vai_tro'] = vt
-                        st.session_state['user'] = u
-                        st.session_state['ho_ten'] = ten
-                        # Reset trạng thái
-                        st.session_state['chi_so'] = 0; st.session_state['diem_so'] = 0; st.session_state['ds_cau_hoi'] = []; st.session_state['da_nop_cau'] = False; st.session_state['lua_chon'] = None; st.session_state['thoi_gian_het'] = None
-                        st.success(f"Chấp nhận truy cập. Xin chào {ten}.")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ TỪ CHỐI: Thông tin xác thực không hợp lệ.")
-            st.markdown('</div>', unsafe_allow_html=True) # Kết thúc khung GCPD
+        st.divider()
+
+        with st.form("form_login"):
+            u = st.text_input("BADGE NUMBER (USER)", placeholder="ENTER ID...")
+            p = st.text_input("ACCESS CODE (PASSWORD)", type="password", placeholder="ENTER CODE...")
+            st.write("")
+            btn = st.form_submit_button("AUTHENTICATE")
+            
+            if btn:
+                vt, ten = kiem_tra_dang_nhap(db, u, p)
+                if vt == "DA_KHOA":
+                    st.error("ACCESS DENIED: PROFILE LOCKED (EXAM COMPLETED)")
+                elif vt:
+                    st.session_state['vai_tro'] = vt
+                    st.session_state['user'] = u
+                    st.session_state['ho_ten'] = ten
+                    # Reset
+                    st.session_state['chi_so'] = 0; st.session_state['diem_so'] = 0; st.session_state['ds_cau_hoi'] = []; st.session_state['da_nop_cau'] = False; st.session_state['lua_chon'] = None; st.session_state['thoi_gian_het'] = None
+                    st.success("ACCESS GRANTED.")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("ACCESS DENIED: INVALID CREDENTIALS")
+        
+        st.markdown('</div>', unsafe_allow_html=True) # --- KẾT THÚC KHUNG PD ---
 
     # ==========================================
-    # 2. GIAO DIỆN GIẢNG VIÊN (ADMIN)
+    # 2. GIAO DIỆN GIẢNG VIÊN (COMMANDER)
     # ==========================================
     elif st.session_state['vai_tro'] == 'GiangVien':
-        st.sidebar.markdown(f"### 👮‍♂️ Chỉ huy: {st.session_state['ho_ten']}")
-        st.sidebar.info("Trạng thái: Admin Mode")
-        if st.sidebar.button("Đăng xuất"):
+        st.sidebar.markdown(f"### COMMANDER: {st.session_state['ho_ten']}")
+        st.sidebar.info("CLEARANCE LEVEL: 5 (ADMIN)")
+        if st.sidebar.button("LOGOUT"):
             st.session_state['vai_tro'] = None
             st.rerun()
         
-        st.markdown('<div class="gcpd-container">', unsafe_allow_html=True)
-        st.markdown("<h3>📝 BỔ SUNG DỮ LIỆU TÌNH HUỐNG</h3>", unsafe_allow_html=True)
+        st.markdown('<div class="pd-frame">', unsafe_allow_html=True)
+        st.markdown("### DATABASE UPDATE // NEW SCENARIO")
+        st.divider()
+        
         with st.form("add"):
-            q = st.text_input("Nội dung tình huống / Câu hỏi")
+            q = st.text_input("INCIDENT DESCRIPTION (QUESTION)")
             c1, c2 = st.columns(2)
-            a, b = c1.text_input("Phương án A"), c1.text_input("Phương án B")
-            c, d = c2.text_input("Phương án C"), c2.text_input("Phương án D")
-            dung = st.selectbox("Đáp án chuẩn", ["A", "B", "C", "D"])
-            gt = st.text_area("Giải thích nghiệp vụ")
-            if st.form_submit_button("LƯU VÀO HỆ THỐNG"):
+            a, b = c1.text_input("OPTION A"), c1.text_input("OPTION B")
+            c, d = c2.text_input("OPTION C"), c2.text_input("OPTION D")
+            dung = st.selectbox("CORRECT PROTOCOL", ["A", "B", "C", "D"])
+            gt = st.text_area("DEBRIEFING NOTES (EXPLANATION)")
+            
+            if st.form_submit_button("UPLOAD TO SERVER"):
                 try:
                     db.worksheet("CauHoi").append_row([q, a, b, c, d, dung, gt])
-                    st.success("✅ Đã cập nhật cơ sở dữ liệu thành công.")
-                except Exception as e: st.error(f"Lỗi hệ thống: {e}")
+                    st.success("DATABASE UPDATED SUCCESSFULLY.")
+                except Exception as e: st.error(f"UPLOAD FAILED: {e}")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
-    # 3. GIAO DIỆN HỌC VIÊN
+    # 3. GIAO DIỆN HỌC VIÊN (OFFICER)
     # ==========================================
     elif st.session_state['vai_tro'] == 'hocvien':
         # Sidebar
-        st.sidebar.markdown(f"### 👮‍♀️ Sĩ quan: {st.session_state['ho_ten']}")
+        st.sidebar.markdown(f"### OFFICER: {st.session_state['ho_ten']}")
         st.sidebar.markdown("---")
-        st.sidebar.metric("Điểm Tích Lũy", f"{st.session_state['diem_so']} CP")
+        st.sidebar.metric("CURRENT SCORE", f"{st.session_state['diem_so']}")
         st.sidebar.markdown("---")
+        st.sidebar.write("STATUS: ACTIVE DUTY")
         
         # Tải dữ liệu
         if not st.session_state['ds_cau_hoi']:
             try: st.session_state['ds_cau_hoi'] = db.worksheet("CauHoi").get_all_values()[1:]
-            except: st.error("Lỗi dữ liệu."); st.stop()
+            except: st.error("DATABASE ERROR."); st.stop()
         
         ds = st.session_state['ds_cau_hoi']
         idx = st.session_state['chi_so']
-        if not ds: st.warning("Chưa có dữ liệu sát hạch."); st.stop()
+        if not ds: st.warning("NO SCENARIOS AVAILABLE."); st.stop()
 
         # Kết thúc
         if idx >= len(ds):
-            st.markdown('<div class="gcpd-container" style="text-align:center;">', unsafe_allow_html=True)
+            st.markdown('<div class="pd-frame" style="text-align:center;">', unsafe_allow_html=True)
             st.balloons()
-            st.markdown("<h2>🏁 HOÀN TẤT NHIỆM VỤ</h2>", unsafe_allow_html=True)
-            st.success(f"Kết quả sát hạch: {st.session_state['diem_so']} / {len(ds)}")
-            st.info("Đang đồng bộ dữ liệu về máy chủ trung tâm...")
+            st.markdown("## MISSION DEBRIEF")
+            st.markdown(f"<h1>FINAL SCORE: {st.session_state['diem_so']} / {len(ds)}</h1>", unsafe_allow_html=True)
+            st.info("SAVING RECORDS TO CENTRAL SERVER...")
             luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
             time.sleep(3)
             st.session_state['vai_tro'] = None
@@ -270,10 +294,10 @@ def main():
         cau = ds[idx]; 
         while len(cau) < 7: cau.append("")
         
-        # Khung GCPD cho câu hỏi
-        st.markdown(f'<div class="gcpd-container">', unsafe_allow_html=True)
-        st.markdown(f"<h4>📑 Tình huống số {idx + 1}:</h4>", unsafe_allow_html=True)
-        st.markdown(f"<p style='font-size:18px; font-weight:bold;'>{cau[0]}</p>", unsafe_allow_html=True)
+        # --- KHUNG PD CHO CÂU HỎI ---
+        st.markdown(f'<div class="pd-frame">', unsafe_allow_html=True)
+        st.markdown(f"#### CASE FILE #{idx + 1}")
+        st.markdown(f"<div style='background:#eee; padding:15px; border-left:5px solid #FFD700; margin-bottom:15px; font-weight:bold; font-size:18px;'>{cau[0]}</div>", unsafe_allow_html=True)
 
         if not st.session_state['da_nop_cau']:
             if st.session_state['thoi_gian_het'] is None: st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
@@ -281,37 +305,37 @@ def main():
             if con_lai <= 0: st.session_state['da_nop_cau'] = True; st.rerun()
             
             st.progress(max(0.0, min(1.0, con_lai/THOI_GIAN_MOI_CAU)))
-            st.caption(f"⏱️ Thời gian phản ứng: {con_lai}s")
+            st.caption(f"RESPONSE TIME: {con_lai}s")
 
             with st.form(f"f_{idx}"):
                 opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
                 if cau[4].strip(): opts.append(f"D. {cau[4]}")
-                chon = st.radio("Lựa chọn phương án:", opts, index=None)
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.form_submit_button("XÁC NHẬN"):
+                chon = st.radio("SELECT PROTOCOL:", opts, index=None)
+                st.write("")
+                if st.form_submit_button("EXECUTE"):
                     if chon: st.session_state['lua_chon'] = chon.split(".")[0]; st.session_state['da_nop_cau'] = True; st.rerun()
-                    else: st.warning("Vui lòng chọn phương án.")
+                    else: st.warning("SELECTION REQUIRED.")
             time.sleep(1); st.rerun()
         else:
             nguoi_chon = st.session_state['lua_chon']; dung_an = str(cau[5]).strip().upper()
             if nguoi_chon == dung_an:
-                st.success(f"✅ CHÍNH XÁC!\n\n💡 Phân tích: {cau[6]}")
+                st.success(f"✅ PROTOCOL FOLLOWED.\n\nNOTE: {cau[6]}")
                 dung = True
             else:
-                msg = f"❌ SAI QUY TRÌNH (Chọn {nguoi_chon})" if nguoi_chon else "⌛ HẾT GIỜ"
-                st.error(f"{msg}\n\n👉 Đáp án đúng: {dung_an}\n\n💡 Phân tích: {cau[6]}")
+                msg = f"❌ VIOLATION (You selected {nguoi_chon})" if nguoi_chon else "⌛ TIME EXPIRED"
+                st.error(f"{msg}\n\nCORRECT PROTOCOL: {dung_an}\n\nNOTE: {cau[6]}")
                 dung = False
             
-            if st.button("TIẾP TỤC ➡️"):
+            if st.button("NEXT CASE ➡️"):
                 if dung: st.session_state['diem_so'] += 1
                 st.session_state['chi_so'] += 1; st.session_state['da_nop_cau'] = False; st.session_state['thoi_gian_het'] = None; st.rerun()
         
-        st.markdown('</div>', unsafe_allow_html=True) # End div
+        st.markdown('</div>', unsafe_allow_html=True) # End Frame
 
-    # --- LỖI VAI TRÒ ---
+    # --- LỖI ---
     else:
-        st.error(f"Lỗi phân quyền: {st.session_state['vai_tro']}")
-        if st.button("Quay lại"): st.session_state['vai_tro'] = None; st.rerun()
+        st.error(f"UNAUTHORIZED ROLE: {st.session_state['vai_tro']}")
+        if st.button("RETURN"): st.session_state['vai_tro'] = None; st.rerun()
 
 if __name__ == "__main__":
     main()
