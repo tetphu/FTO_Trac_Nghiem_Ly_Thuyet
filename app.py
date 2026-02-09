@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 
-# --- 1. KHỞI TẠO TRANG ---
+# --- 1. CẤU HÌNH ---
 st.set_page_config(page_title="FTO System", page_icon="🚓", layout="centered")
 
 # --- 2. KIỂM TRA THƯ VIỆN ---
@@ -14,58 +14,54 @@ except ImportError as e:
     st.error(f"❌ LỖI: Thiếu thư viện. Hãy kiểm tra file requirements.txt.\nChi tiết: {e}")
     st.stop()
 
-# --- 3. CẤU HÌNH ---
 THOI_GIAN_MOI_CAU = 30
 
-# --- 4. CSS TÙY CHỈNH ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
         .block-container { padding-top: 1rem; padding-bottom: 5rem; }
         header, footer { visibility: hidden; }
         
-        /* Tiêu đề App */
         .gcpd-title {
             font-family: sans-serif; color: #002147; 
             font-size: 24px; font-weight: 900; text-align: center;
             text-transform: uppercase; margin-bottom: 20px;
         }
         
-        /* Đồng hồ đếm ngược */
-        .timer-box {
-            font-size: 40px; font-weight: bold; color: #d9534f;
-            text-align: center; margin: 10px 0;
-            border: 2px solid #d9534f; border-radius: 10px;
-            padding: 5px; width: 100px; margin-left: auto; margin-right: auto;
-            background-color: #fff5f5;
+        /* Đồng hồ số */
+        .timer-digital {
+            font-size: 45px; font-weight: 900; color: #d32f2f;
+            text-align: center; background-color: #ffebee;
+            border: 2px solid #d32f2f; border-radius: 12px;
+            width: 120px; margin: 0 auto 20px auto;
+            padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         /* Khung câu hỏi */
         .question-box {
-            background-color: #f0f2f6;
-            padding: 20px; border-radius: 10px;
-            border-left: 5px solid #002147;
+            background-color: #ffffff; padding: 20px; border-radius: 10px;
+            border: 2px solid #002147;
             font-size: 18px; font-weight: bold; color: #002147;
-            margin-bottom: 20px;
+            margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
         /* Khung giải thích */
         .explanation-box {
             background-color: #e8f5e9; padding: 15px;
-            border-radius: 8px; border: 1px solid #4caf50;
-            margin-top: 15px; color: #2e7d32;
+            border-radius: 8px; border-left: 5px solid #4caf50;
+            margin-top: 15px; color: #1b5e20; font-size: 16px;
         }
 
-        /* Button Style */
         .stButton button {
             background-color: #002147 !important; color: #FFD700 !important;
             font-weight: bold !important; width: 100%; padding: 12px !important;
-            border-radius: 8px !important;
+            border-radius: 8px !important; font-size: 16px !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-# --- 5. KẾT NỐI DATABASE ---
+# --- 4. KẾT NỐI DATABASE ---
 def ket_noi_csdl():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -79,7 +75,7 @@ def ket_noi_csdl():
         st.error(f"❌ LỖI KẾT NỐI: {e}")
         return None
 
-# --- 6. HÀM XỬ LÝ LOGIC ---
+# --- 5. HÀM XỬ LÝ ---
 def kiem_tra_dang_nhap(db, user, pwd):
     try:
         ws = db.worksheet("HocVien")
@@ -107,22 +103,20 @@ def cap_nhat_trang_thai(db, user, stt):
         ws.update_cell(cell.row, 5, stt)
     except: pass
 
-# --- 7. CHƯƠNG TRÌNH CHÍNH ---
+def lay_giao_trinh(db):
+    try: return db.worksheet("GiaoTrinh").get_all_records()
+    except: return []
+
+# --- 6. CHƯƠNG TRÌNH CHÍNH ---
 def main():
     inject_css()
-    
     if 'vai_tro' not in st.session_state:
-        st.session_state.update(
-            vai_tro=None, diem_so=0, chi_so=0, 
-            bat_dau=False, da_nop_cau=False, 
-            ds_cau_hoi=[], thoi_gian_het=None, 
-            lua_chon=None, loai_thi=None
-        )
+        st.session_state.update(vai_tro=None, diem_so=0, chi_so=0, bat_dau=False, da_nop_cau=False, ds_cau_hoi=[], thoi_gian_het=None, lua_chon=None, loai_thi=None)
 
     db = ket_noi_csdl()
     if not db: st.stop()
 
-    # === A. ĐĂNG NHẬP ===
+    # --- A. ĐĂNG NHẬP ---
     if st.session_state['vai_tro'] is None:
         c1, c2 = st.columns([1, 2.5])
         with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
@@ -138,7 +132,7 @@ def main():
                     st.rerun()
                 else: st.error("Sai thông tin!")
 
-    # === B. DASHBOARD ===
+    # --- B. DASHBOARD ---
     else:
         with st.sidebar:
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=80)
@@ -168,7 +162,7 @@ def main():
                 ws.clear(); ws.update([headers] + edited.values.tolist())
                 st.success("Đã lưu!")
 
-        # 2. QUẢN TRỊ USER
+        # 2. QUẢN TRỊ USER (SỬA LỖI TYPE ERROR)
         elif menu == "QUẢN TRỊ USER" or menu == "CẤP QUYỀN THI":
             st.info("✅ QUẢN LÝ TRẠNG THÁI")
             ws = db.worksheet("HocVien")
@@ -178,6 +172,7 @@ def main():
             df = pd.DataFrame(clean, columns=headers)
             if role != 'Admin': df = df[df['Role'] == 'hocvien']
             
+            # Đã bỏ type='password' để tránh lỗi
             edited = st.data_editor(df, use_container_width=True,
                 column_config={
                     "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
@@ -194,106 +189,14 @@ def main():
         # 3. GIÁO TRÌNH
         elif menu == "GIÁO TRÌNH":
             st.title("📚 TÀI LIỆU")
-            try:
-                data = db.worksheet("GiaoTrinh").get_all_records()
-                for l in data:
-                    with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                        st.write(l.get('NoiDung',''))
-                        if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
-            except: st.warning("Chưa có giáo trình.")
+            data = lay_giao_trinh(db)
+            for l in data:
+                with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                    st.write(l.get('NoiDung',''))
+                    if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
 
-        # 4. THI CỬ
+        # 4. THI CỬ (LOGIC MỚI)
         elif "THI" in menu or menu == "ĐANG THI":
             if not st.session_state['bat_dau']:
                 mode = 'thu' if "THỬ" in menu else 'that'
-                st.subheader("LUYỆN TẬP" if mode=='thu' else "SÁT HẠCH CHÍNH THỨC")
-                if st.button("BẮT ĐẦU"):
-                    if mode == 'that':
-                        try:
-                            c = db.worksheet("HocVien").find(st.session_state['user'])
-                            s = db.worksheet("HocVien").cell(c.row, 5).value
-                            if s != "DuocThi": st.error(f"Chưa được cấp quyền! ({s})"); st.stop()
-                            cap_nhat_trang_thai(db, st.session_state['user'], "DangThi")
-                        except: st.error("Lỗi user"); st.stop()
-
-                    qs = db.worksheet("CauHoi").get_all_values()
-                    lst = qs[1:] if len(qs)>1 else []
-                    if mode=='thu' and len(lst)>0: lst = random.sample(lst, min(10, len(lst)))
-                    st.session_state.update(bat_dau=True, ds_cau_hoi=lst, chi_so=0, diem_so=0, loai_thi=mode)
-                    st.rerun()
-            else:
-                qs = st.session_state['ds_cau_hoi']
-                idx = st.session_state['chi_so']
-                
-                # Hết câu hỏi
-                if idx >= len(qs):
-                    st.balloons()
-                    st.success(f"🏁 KẾT QUẢ: {st.session_state['diem_so']} / {len(qs)}")
-                    if st.button("KẾT THÚC VÀ NỘP BÀI"):
-                        if st.session_state['loai_thi'] == 'that':
-                            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
-                        st.session_state.clear(); st.rerun()
-                    st.stop()
-                
-                q = qs[idx]
-                while len(q)<7: q.append("")
-                
-                # --- PHẦN 1: ĐANG LÀM BÀI ---
-                if not st.session_state['da_nop_cau']:
-                    if not st.session_state['thoi_gian_het']: 
-                        st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
-                    
-                    left = int(st.session_state['thoi_gian_het'] - time.time())
-                    
-                    # Hết giờ tự nộp
-                    if left <= 0:
-                        st.session_state.update(da_nop_cau=True, lua_chon=None)
-                        st.rerun()
-                    
-                    # HIỂN THỊ ĐỒNG HỒ SỐ (KHÔNG CÓ THANH CHẠY)
-                    st.markdown(f"<div class='timer-box'>⏳ {left}</div>", unsafe_allow_html=True)
-                    
-                    st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
-                    
-                    # Khung câu hỏi
-                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
-                    
-                    # Đáp án
-                    ans = st.radio("Lựa chọn của bạn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"])
-                    
-                    if st.button("CHỐT ĐÁP ÁN"):
-                        st.session_state.update(da_nop_cau=True, lua_chon=ans.split('.')[0] if ans else None)
-                        st.rerun()
-                    time.sleep(1); st.rerun()
-                
-                # --- PHẦN 2: ĐÃ TRẢ LỜI (HIỆN LẠI CÂU HỎI + GIẢI THÍCH) ---
-                else:
-                    st.markdown(f"**Câu {idx+1}:**")
-                    # Hiển thị lại câu hỏi để đối chiếu
-                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
-
-                    res = st.session_state['lua_chon']
-                    true_ans = str(q[5]).strip().upper()
-                    
-                    # So sánh kết quả
-                    if res == true_ans:
-                        st.success(f"✅ CHÍNH XÁC! Bạn chọn: {res}")
-                    else:
-                        st.error(f"❌ SAI RỒI! Bạn chọn: {res if res else 'Không chọn'}")
-                        st.warning(f"👉 Đáp án đúng là: {true_ans}")
-
-                    # Hiện giải thích
-                    explanation = str(q[6]).strip()
-                    if explanation:
-                        st.markdown(f"<div class='explanation-box'>💡 <b>Giải thích chi tiết:</b><br>{explanation}</div>", unsafe_allow_html=True)
-                    else:
-                        st.info("💡 (Không có giải thích chi tiết cho câu này)")
-                    
-                    st.write("")
-                    if st.button("CÂU TIẾP THEO ➡️"):
-                        if res == true_ans: st.session_state['diem_so'] += 1
-                        st.session_state.update(chi_so=idx+1, da_nop_cau=False, thoi_gian_het=None)
-                        st.rerun()
-
-if __name__ == "__main__":
-    main()
+                st.subheader("LUYỆN TẬP" if mode=='thu' else "SÁT HẠCH CHÍNH
