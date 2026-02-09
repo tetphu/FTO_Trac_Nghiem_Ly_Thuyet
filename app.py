@@ -234,4 +234,58 @@ def main():
                             luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
                         
                         # Reset trạng thái thi nhưng giữ đăng nhập
-                        st.session_state.update(bat_dau=False, ds_cau_hoi=[], chi_so=0, diem_so=0, da_nop_cau=False, thoi_gian_het=None, lua_chon=
+                        st.session_state.update(bat_dau=False, ds_cau_hoi=[], chi_so=0, diem_so=0, da_nop_cau=False, thoi_gian_het=None, lua_chon=None)
+                        st.rerun()
+                    st.stop()
+                
+                q = qs[idx]
+                while len(q)<7: q.append("")
+                
+                # --- PHẦN 1: ĐANG SUY NGHĨ ---
+                if not st.session_state['da_nop_cau']:
+                    if not st.session_state['thoi_gian_het']: st.session_state['thoi_gian_het'] = time.time()+THOI_GIAN_MOI_CAU
+                    left = int(st.session_state['thoi_gian_het'] - time.time())
+                    
+                    if left<=0: 
+                        st.session_state.update(da_nop_cau=True, lua_chon=None)
+                        st.rerun()
+                    
+                    st.markdown(f"<div class='timer-digital'>⏳ {left}</div>", unsafe_allow_html=True)
+                    st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
+                    
+                    ans = st.radio("Lựa chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key="radio_running")
+                    
+                    st.write("")
+                    if st.button("CHỐT ĐÁP ÁN"):
+                        st.session_state.update(da_nop_cau=True, lua_chon=ans.split('.')[0] if ans else None)
+                        st.rerun()
+                    
+                    time.sleep(1); st.rerun()
+                
+                # --- PHẦN 2: ĐÃ TRẢ LỜI ---
+                else:
+                    st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
+                    
+                    st.radio("Bạn đã chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], 
+                             index=["A","B","C","D"].index(st.session_state['lua_chon']) if st.session_state['lua_chon'] else None,
+                             disabled=True, key="radio_finished")
+
+                    res = st.session_state['lua_chon']
+                    true_ans = str(q[5]).strip().upper()
+                    
+                    if res == true_ans: st.success(f"✅ CHÍNH XÁC! (Đáp án: {res})")
+                    else: st.error(f"❌ SAI RỒI! Bạn chọn: {res if res else '...'} - Đúng là: {true_ans}")
+                    
+                    if str(q[6]).strip():
+                        st.markdown(f"<div class='explanation-box'>💡 <b>Giải thích:</b> {q[6]}</div>", unsafe_allow_html=True)
+                    
+                    st.write("")
+                    if st.button("CÂU TIẾP THEO ➡️"):
+                        if res == true_ans: st.session_state['diem_so'] += 1
+                        st.session_state.update(chi_so=idx+1, da_nop_cau=False, thoi_gian_het=None)
+                        st.rerun()
+
+if __name__ == "__main__":
+    main()
