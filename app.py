@@ -8,7 +8,7 @@ import random
 # --- 1. CẤU HÌNH ---
 THOI_GIAN_MOI_CAU = 30
 
-# --- 2. HÀM GIAO DIỆN ---
+# --- 2. HÀM GIAO DIỆN (CSS) ---
 def inject_css():
     st.markdown("""
         <style>
@@ -58,16 +58,24 @@ def ket_noi_csdl():
 def kiem_tra_dang_nhap(db, user, pwd):
     try:
         ws = db.worksheet("HocVien")
+        # Lấy tất cả giá trị, bỏ qua header lỗi
         rows = ws.get_all_values()
-        for row in rows[1:]:
-            if len(row) < 4: continue
-            # Cột A: User, B: Pass, C: Role, D: Name, E: Status
-            if str(row[0]).strip() == str(user).strip() and str(row[1]).strip() == str(pwd).strip():
-                status = str(row[4]).strip() if len(row) > 4 else "ChuaDuocThi"
+        
+        for row in rows[1:]: # Duyệt từ dòng 2
+            # Đảm bảo dòng có đủ dữ liệu, nếu thiếu thì bỏ qua
+            if len(row) < 3: continue
+            
+            # Cấu trúc cột mặc định: A=User, B=Pass, C=Role, D=Name, E=Status
+            u_db = str(row[0]).strip()
+            p_db = str(row[1]).strip()
+            
+            if u_db == str(user).strip() and p_db == str(pwd).strip():
                 role = str(row[2]).strip()
-                name = str(row[3]).strip()
+                name = str(row[3]).strip() if len(row) > 3 else "No Name"
+                status = str(row[4]).strip() if len(row) > 4 else "ChuaDuocThi"
                 return role, name, status
-    except: pass
+    except Exception as e:
+        pass
     return None, None, None
 
 def cap_nhat_trang_thai(db, user, status_moi):
@@ -100,15 +108,24 @@ def main():
 
     if 'vai_tro' not in st.session_state: 
         st.session_state.update(
-            vai_tro=None, trang_thai_hien_tai=None, loai_thi=None,
-            chi_so=0, diem_so=0, ds_cau_hoi=[], da_nop_cau=False, 
-            bat_dau=False, thoi_gian_het=None, lua_chon=None
+            vai_tro=None, 
+            trang_thai_hien_tai=None, 
+            loai_thi=None,
+            chi_so=0, 
+            diem_so=0, 
+            ds_cau_hoi=[], 
+            da_nop_cau=False, 
+            bat_dau=False, 
+            thoi_gian_het=None, 
+            lua_chon=None
         )
 
     db = ket_noi_csdl()
     if not db: st.stop()
 
-    # --- A. MÀN HÌNH ĐĂNG NHẬP ---
+    # ==========================================
+    # A. MÀN HÌNH ĐĂNG NHẬP
+    # ==========================================
     if st.session_state['vai_tro'] is None:
         with st.form("login"):
             c1, c2 = st.columns([1, 2.5])
@@ -127,7 +144,9 @@ def main():
                 else: 
                     st.error("❌ SAI THÔNG TIN ĐĂNG NHẬP")
 
-    # --- B. ĐÃ ĐĂNG NHẬP ---
+    # ==========================================
+    # B. ĐÃ ĐĂNG NHẬP (DASHBOARD)
+    # ==========================================
     else:
         with st.sidebar:
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
@@ -139,6 +158,7 @@ def main():
                 st.metric("🏆 ĐIỂM", f"{st.session_state['diem_so']}")
             st.divider()
             
+            # --- MENU PHÂN QUYỀN ---
             role = st.session_state['vai_tro']
             if role == 'Admin':
                 ds_chuc_nang = ["📖 GIÁO TRÌNH", "⚙️ QUẢN LÝ CÂU HỎI", "✅ QUẢN TRỊ USER (FULL)"]
@@ -147,6 +167,7 @@ def main():
             else:
                 ds_chuc_nang = ["📝 THI THỬ (LUYỆN TẬP)", "🚨 THI SÁT HẠCH (CHÍNH THỨC)"]
             
+            # Nếu đang thi thì khóa menu, không cho chuyển
             if st.session_state['bat_dau']:
                  st.info("⚠️ Đang làm bài thi...")
                  menu = st.session_state.get('last_menu', ds_chuc_nang[0])
@@ -158,9 +179,9 @@ def main():
                     for key in list(st.session_state.keys()): del st.session_state[key]
                     st.rerun()
 
-        # ============================================================
-        # 1. CHỨC NĂNG GIÁO TRÌNH & CÂU HỎI
-        # ============================================================
+        # --------------------------------------------------------
+        # CHỨC NĂNG 1: GIÁO TRÌNH & CÂU HỎI
+        # --------------------------------------------------------
         if "GIÁO TRÌNH" in menu:
             st.title("📚 TÀI LIỆU NỘI BỘ")
             ds_bai = lay_giao_trinh(db)
@@ -174,11 +195,20 @@ def main():
         elif "QUẢN LÝ CÂU HỎI" in menu:
             st.title("⚙️ NGÂN HÀNG CÂU HỎI")
             ws_cauhoi = db.worksheet("CauHoi")
+            
+            # --- ÉP KIỂU CỘT CHO CÂU HỎI ---
             all_values = ws_cauhoi.get_all_values()
             headers = ["CauHoi", "A", "B", "C", "D", "DapAn_Dung", "GiaiThich"]
-            if len(all_values) > 1: df = pd.DataFrame(all_values[1:], columns=headers)
-            else: df = pd.DataFrame(columns=headers)
+            
+            if len(all_values) > 1:
+                # Chỉ lấy tối đa 7 cột để tránh lỗi
+                clean_data = [row[:7] + [""]*(7-len(row)) for row in all_values[1:]]
+                df = pd.DataFrame(clean_data, columns=headers)
+            else: 
+                df = pd.DataFrame(columns=headers)
+                
             edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, height=400)
+            
             if st.button("💾 LƯU THAY ĐỔI", type="primary"):
                 try:
                     ws_cauhoi.clear()
@@ -186,40 +216,35 @@ def main():
                     st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"Lỗi: {e}")
 
-        # ============================================================
-        # 2. CHỨC NĂNG QUẢN TRỊ / CẤP QUYỀN (ĐÃ FIX LỖI KEYERROR)
-        # ============================================================
+        # --------------------------------------------------------
+        # CHỨC NĂNG 2: QUẢN TRỊ USER / CẤP QUYỀN (ĐÃ FIX KEYERROR)
+        # --------------------------------------------------------
         elif "QUẢN TRỊ USER" in menu or "CẤP QUYỀN THI" in menu:
             is_admin = (st.session_state['vai_tro'] == 'Admin')
             
-            st.title("✅ QUẢN LÝ THI")
+            st.title("✅ QUẢN LÝ THI & USER")
             st.info("Chỉ huy có thể cấp quyền thi cho học viên tại đây.")
             
             ws_hv = db.worksheet("HocVien")
-            
-            # --- [FIX QUAN TRỌNG] LẤY DỮ LIỆU & ÉP TÊN CỘT ---
             all_rows = ws_hv.get_all_values()
-            # Bắt buộc đặt tên cột chuẩn để tránh lỗi KeyError
+            
+            # --- KHAI BÁO CỘT CỐ ĐỊNH (FIX LỖI KEYERROR) ---
             std_headers = ["Username", "Password", "Role", "HoTen", "TrangThai", "Diem"]
             
             if len(all_rows) > 1:
-                # Nếu file có dữ liệu, ép vào DataFrame với cột chuẩn
-                # Nếu cột thiếu, pandas sẽ báo lỗi, nhưng thường sheet sẽ đủ.
-                # Cách an toàn: Chỉ lấy 6 cột đầu tiên
+                # Ép dữ liệu vào đúng 6 cột, thiếu thì bù chuỗi rỗng
                 data_clean = [r[:6] + [""]*(6-len(r)) for r in all_rows[1:]] 
                 df_hv = pd.DataFrame(data_clean, columns=std_headers)
             else:
                 df_hv = pd.DataFrame(columns=std_headers)
 
             if not df_hv.empty:
-                # --- LOGIC LỌC ---
                 if is_admin:
-                    df_display = df_hv # Admin thấy hết
+                    df_display = df_hv
                 else:
-                    # Giảng viên chỉ thấy Role = 'hocvien'
+                    # GV chỉ thấy role là hocvien
                     df_display = df_hv[df_hv['Role'] == 'hocvien']
                 
-                # --- HIỂN THỊ BẢNG ---
                 edited_df = st.data_editor(
                     df_display,
                     use_container_width=True,
@@ -228,55 +253,45 @@ def main():
                         "TrangThai": st.column_config.SelectboxColumn(
                             "Trạng Thái Thi",
                             options=["ChuaDuocThi", "DuocThi", "DangThi", "DaThi", "Khoa"],
-                            required=True,
-                            width="medium"
+                            required=True, width="medium"
                         ),
                         "Role": st.column_config.SelectboxColumn(
                             "Vai Trò",
                             options=["hocvien", "GiangVien", "Admin"],
-                            disabled=not is_admin # GV không sửa được Role
+                            disabled=not is_admin
                         ),
-                        # Ẩn mật khẩu với GV
                         "Password": st.column_config.TextColumn(
                             "Mật khẩu",
                             disabled=not is_admin,
-                            type="password" if not is_admin else "text" # GV thấy dấu ***
+                            type="password" if not is_admin else "text"
                         )
                     }
                 )
                 
                 if st.button("💾 LƯU CẬP NHẬT", type="primary"):
                     try:
-                        # Logic lưu: Merge dữ liệu sửa vào dữ liệu gốc
                         if is_admin:
                             final_df = edited_df
                         else:
+                            # Merge lại nếu là GV (để không mất dòng của Admin)
                             final_df = df_hv.copy()
+                            # Dùng Username làm index tạm để update
                             final_df.set_index("Username", inplace=True)
-                            edited_df.set_index("Username", inplace=True)
-                            final_df.update(edited_df)
+                            temp_edit = edited_df.set_index("Username")
+                            final_df.update(temp_edit)
                             final_df.reset_index(inplace=True)
-                            edited_df.reset_index(inplace=True)
-                        
+
                         ws_hv.clear()
                         ws_hv.update([std_headers] + final_df.values.tolist())
                         st.success("✅ Đã cập nhật thành công!")
                         time.sleep(1); st.rerun()
                     except Exception as e: st.error(f"Lỗi: {e}")
 
-        # ============================================================
-        # 3. CHỨC NĂNG THI
-        # ============================================================
+        # --------------------------------------------------------
+        # CHỨC NĂNG 3: THI (SỬA LỖI HIỂN THỊ CHỒNG CHÉO)
+        # --------------------------------------------------------
         elif "THI THỬ" in menu or "THI SÁT HẠCH" in menu:
             is_practice = "THI THỬ" in menu
             exam_title = "LUYỆN TẬP (THI THỬ)" if is_practice else "SÁT HẠCH CHÍNH THỨC"
             
-            if not st.session_state['bat_dau']:
-                with st.form("start_exam"):
-                    c1, c2 = st.columns([1, 2.5])
-                    with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
-                    with c2: st.markdown(f'<div class="gcpd-title">{exam_title}</div>', unsafe_allow_html=True)
-                    st.divider()
-                    
-                    if is_practice: st.info("ℹ️ Chế độ luyện tập: Random 10 câu. Không lưu điểm.")
-                    else: st.warning("⚠️ BÀI THI CHÍNH THỨC.\n\n- Yêu cầu
+            # --- TRƯỜNG HỢP 1: CHƯ
