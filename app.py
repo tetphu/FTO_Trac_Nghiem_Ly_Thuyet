@@ -279,4 +279,4 @@ def main():
                     st.divider()
                     
                     if is_practice: st.info("ℹ️ Chế độ luyện tập: Random 10 câu. Không lưu điểm.")
-                    else: st.warning("⚠️ BÀI THI CH
+                    else: st.warning("⚠️ BÀI THI CHÍNH THỨC.\n\n- Yêu cầu
