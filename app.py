@@ -1,66 +1,111 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
 import time
-
-# --- KIỂM TRA THƯ VIỆN PANDAS (CHỐNG LỖI TRẮNG MÀN HÌNH) ---
-try:
-    import pandas as pd
-except ImportError:
-    st.error("⚠️ LỖI: Thiếu thư viện 'pandas'. Bạn hãy vào file requirements.txt trên GitHub và thêm chữ 'pandas' vào đó nhé!")
-    st.stop()
 
 # --- 1. CẤU HÌNH ---
 THOI_GIAN_MOI_CAU = 30
 
-# --- 2. HÀM GIAO DIỆN (ĐÃ TỐI ƯU CHO MOBILE) ---
+# --- 2. HÀM GIAO DIỆN (ĐÃ TỐI ƯU LIGHT/DARK THEME) ---
 def inject_css():
     st.markdown("""
         <style>
-        /* Tối ưu lề cho điện thoại */
+        /* Tinh chỉnh lề cho mobile */
         .block-container { 
             padding-top: 1rem; 
             padding-bottom: 3rem; 
             padding-left: 0.5rem; 
             padding-right: 0.5rem;
         }
+        
+        /* Ẩn Header/Footer mặc định */
         header, footer { visibility: hidden; }
-        .stApp { background-color: #ffffff; }
         
+        /* TIÊU ĐỀ: Tự động đổi màu theo theme hoặc giữ màu thương hiệu nếu nền sáng */
         .gcpd-title {
-            font-family: 'Arial Black', sans-serif; color: #002147; 
-            font-size: 24px; /* Giảm cỡ chữ tiêu đề */
+            font-family: 'Arial Black', sans-serif; 
+            color: #002147; /* Màu xanh cảnh sát */
+            font-size: 24px; 
             text-transform: uppercase;
-            margin-top: 5px; line-height: 1.2; font-weight: 900;
+            margin-top: 5px; 
+            line-height: 1.2; 
+            font-weight: 900;
             text-align: center;
+            text-shadow: 1px 1px 0px #ffffff; /* Viền trắng nhẹ để dễ đọc nếu nền tối */
         }
         
+        /* KHUNG FORM (LOGIN, CÂU HỎI): Luôn nền trắng để chữ Xanh dễ đọc */
         [data-testid="stForm"] {
-            border: 2px solid #002147; border-radius: 10px; padding: 10px;
-            background-image: url("https://raw.githubusercontent.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/refs/heads/main/nen.png");
-            background-size: cover; background-position: center;
-            background-color: rgba(255, 255, 255, 0.9); background-blend-mode: overlay;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            background-color: #ffffff; /* Luôn là nền trắng */
+            border: 2px solid #002147; 
+            border-radius: 10px; 
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Đổ bóng nhẹ */
         }
         
-        /* Input và Button to rõ dễ bấm */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
-            border: 2px solid #002147 !important; border-radius: 5px !important;
-            font-weight: bold; color: #000 !important;
-        }
-        .stButton button {
-            background-color: #002147 !important; color: #FFD700 !important;
-            font-weight: bold !important; width: 100%; 
-            padding: 12px !important;
-            font-size: 16px !important;
-        }
-        
+        /* KHUNG BÀI HỌC (Lesson Card) */
         .lesson-card {
-            background-color: #f8f9fa; border-left: 4px solid #002147;
-            padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            background-color: #ffffff; /* Luôn nền trắng */
+            border-left: 6px solid #002147; /* Viền trái xanh đậm */
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: #333333; /* Chữ đen để dễ đọc */
         }
-        .lesson-title { color: #002147; font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-        .lesson-content { font-size: 14px; line-height: 1.5; color: #333; white-space: pre-wrap; }
+        .lesson-title { 
+            color: #002147; 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 8px; 
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .lesson-content { 
+            font-size: 15px; 
+            line-height: 1.6; 
+            color: #333; 
+            white-space: pre-wrap; 
+        }
+
+        /* TÙY CHỈNH INPUT & SELECT BOX (Ép nền trắng, chữ đen) */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {
+            background-color: #ffffff !important;
+            color: #002147 !important; /* Chữ xanh khi gõ */
+            border: 1px solid #002147 !important;
+            border-radius: 5px !important;
+        }
+        
+        /* LABEL (Nhãn của ô nhập liệu) */
+        .stTextInput label, .stSelectbox label, .stRadio label {
+            color: #002147 !important;
+            font-weight: bold !important;
+        }
+        
+        /* RADIO BUTTON (Đáp án) */
+        .stRadio div[role="radiogroup"] {
+            color: #333333; /* Màu chữ đáp án */
+        }
+
+        /* NÚT BẤM (BUTTON) */
+        .stButton button {
+            background-color: #002147 !important; 
+            color: #FFD700 !important; /* Chữ vàng trên nền xanh */
+            font-weight: bold !important; 
+            width: 100%; 
+            padding: 12px !important;
+            border-radius: 8px !important;
+            border: none !important;
+        }
+        .stButton button:hover {
+            background-color: #003366 !important; /* Sáng hơn khi di chuột */
+        }
+        
+        /* THANH TIẾN TRÌNH */
+        .stProgress > div > div > div > div {
+            background-color: #002147 !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -118,7 +163,6 @@ def lay_giao_trinh(db):
 
 # --- 5. CHƯƠNG TRÌNH CHÍNH ---
 def main():
-    # QUAN TRỌNG: layout="centered" ĐỂ TỐI ƯU CHO ĐIỆN THOẠI
     st.set_page_config(page_title="FTO System", page_icon="🚓", layout="centered")
     inject_css() 
 
@@ -135,7 +179,10 @@ def main():
             with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
             with c2: st.markdown('<div class="gcpd-title">GACHA CITY<BR>POLICE DEPT<BR>ACADEMY</div>', unsafe_allow_html=True)
             st.divider()
-            st.markdown("<h4 style='text-align: center;'>▼ ĐĂNG NHẬP HỆ THỐNG</h4>", unsafe_allow_html=True)
+            
+            # Dùng markdown thay vì header để kiểm soát màu sắc
+            st.markdown("<h4 style='text-align: center; color: #002147;'>▼ ĐĂNG NHẬP HỆ THỐNG</h4>", unsafe_allow_html=True)
+            
             u = st.text_input("SỐ HIỆU (Momo)")
             p = st.text_input("MÃ BẢO MẬT", type="password")
             
@@ -154,15 +201,15 @@ def main():
     else:
         with st.sidebar:
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=100)
-            st.markdown(f"### 👮 Sĩ quan: {st.session_state['ho_ten']}")
-            st.code(f"Vai trò: {st.session_state['vai_tro']}") 
+            st.markdown(f"### 👮 {st.session_state['ho_ten']}")
+            # Badge vai trò
+            st.markdown(f"<span style='background-color:#002147; color:#FFD700; padding: 4px 8px; border-radius: 4px; font-weight:bold; font-size: 12px;'>{st.session_state['vai_tro']}</span>", unsafe_allow_html=True)
             
             if st.session_state['bat_dau']:
                 st.divider()
                 st.metric("🏆 ĐIỂM", f"{st.session_state['diem_so']}")
             st.divider()
             
-            # PHÂN QUYỀN MENU
             if st.session_state['vai_tro'] == 'GiangVien':
                 ds_chuc_nang = ["📖 GIÁO TRÌNH FTO (GV)", "⚙️ QUẢN LÝ CÂU HỎI (GV)"]
             else:
@@ -174,28 +221,36 @@ def main():
                 for key in list(st.session_state.keys()): del st.session_state[key]
                 st.rerun()
 
-        # --- LOGIC CÁC CHỨC NĂNG ---
-        
         # 1. GIÁO TRÌNH
         if "GIÁO TRÌNH FTO" in menu:
-            st.title("📚 TÀI LIỆU NỘI BỘ")
+            st.markdown("<h2 style='color:#002147;'>📚 TÀI LIỆU NỘI BỘ</h2>", unsafe_allow_html=True)
             ds_bai = lay_giao_trinh(db)
             if not ds_bai: st.warning("Chưa có bài giảng.")
             else:
                 for bai in ds_bai:
                     with st.container():
-                        st.markdown(f"""<div class="lesson-card"><div class="lesson-title">{bai['BaiHoc']}</div><div class="lesson-content">{bai['NoiDung']}</div></div>""", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="lesson-card">
+                            <div class="lesson-title">{bai['BaiHoc']}</div>
+                            <div class="lesson-content">{bai['NoiDung']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         if str(bai['HinhAnh']).startswith("http"): st.image(bai['HinhAnh'], use_column_width=True)
                         st.divider()
 
         # 2. QUẢN LÝ CÂU HỎI
         elif "QUẢN LÝ CÂU HỎI" in menu:
-            st.title("⚙️ NGÂN HÀNG CÂU HỎI")
-            st.caption("💡 Hướng dẫn: Bấm vào ô để sửa. Chọn dòng và bấm Delete để xóa. Bấm nút '+' để thêm.")
+            st.markdown("<h2 style='color:#002147;'>⚙️ NGÂN HÀNG CÂU HỎI</h2>", unsafe_allow_html=True)
+            st.caption("💡 Hướng dẫn: Sửa trực tiếp vào bảng. Bấm dấu '+' để thêm dòng mới. Chọn dòng và bấm Delete để xóa.")
             
             ws_cauhoi = db.worksheet("CauHoi")
-            data = ws_cauhoi.get_all_records()
-            df = pd.DataFrame(data)
+            all_values = ws_cauhoi.get_all_values()
+            headers = ["CauHoi", "A", "B", "C", "D", "DapAn_Dung", "GiaiThich"]
+            
+            if len(all_values) > 1:
+                df = pd.DataFrame(all_values[1:], columns=headers)
+            else:
+                df = pd.DataFrame(columns=headers)
 
             edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, height=500)
 
@@ -203,7 +258,7 @@ def main():
                 with st.spinner("Đang lưu..."):
                     try:
                         ws_cauhoi.clear()
-                        rows_to_update = [edited_df.columns.values.tolist()] + edited_df.values.tolist()
+                        rows_to_update = [headers] + edited_df.values.tolist()
                         ws_cauhoi.update(rows_to_update)
                         st.success("✅ Đã cập nhật!")
                         time.sleep(1)
@@ -216,10 +271,12 @@ def main():
             # A. CHƯA BẮT ĐẦU
             if not st.session_state['bat_dau']:
                 with st.form("start_exam"):
-                    c1, c2 = st.columns([1, 2])
+                    c1, c2 = st.columns([1, 2.5])
                     with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
-                    with c2: st.markdown("### BÀI THI SÁT HẠCH")
-                    st.warning("⚠️ LƯU Ý: Thoát ra giữa chừng sẽ bị KHÓA HỒ SƠ.")
+                    with c2: st.markdown('<div class="gcpd-title">BÀI THI SÁT HẠCH<br>LÝ THUYẾT</div>', unsafe_allow_html=True)
+                    st.divider()
+                    st.warning("⚠️ LƯU Ý QUAN TRỌNG:\n\n1. Thời gian tính ngay khi bấm bắt đầu.\n2. Nếu thoát ra giữa chừng, bài thi sẽ bị HỦY và KHÓA HỒ SƠ.")
+                    
                     if st.form_submit_button("BẮT ĐẦU LÀM BÀI", type="primary"):
                         danh_dau_dang_thi(db, st.session_state['user'])
                         st.session_state['bat_dau'] = True
@@ -245,39 +302,42 @@ def main():
                 cau = ds[idx]
                 while len(cau) < 7: cau.append("")
 
-                # TRẠNG THÁI: CHƯA CHỐT ĐÁP ÁN
                 if not st.session_state['da_nop_cau']:
                     if st.session_state['thoi_gian_het'] is None: 
                         st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
                     con_lai = int(st.session_state['thoi_gian_het'] - time.time())
                     if con_lai <= 0: st.session_state['da_nop_cau'] = True; st.session_state['lua_chon'] = None; st.rerun()
 
-                    c_time, c_score = st.columns([2.5,1]) # Chỉnh tỷ lệ cột cho mobile
+                    c_time, c_score = st.columns([2.5,1])
                     c_time.progress(max(0.0, min(1.0, con_lai/THOI_GIAN_MOI_CAU))); c_time.caption(f"⏳ {con_lai}s")
                     c_score.markdown(f"**Đ: {st.session_state['diem_so']}**")
 
                     with st.form(f"q_{idx}"):
-                        st.markdown(f"**Câu {idx+1}: {cau[0]}**")
+                        st.markdown(f"<h5 style='color:#002147'>Câu {idx+1}: {cau[0]}</h5>", unsafe_allow_html=True)
                         opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
                         if str(cau[4]).strip(): opts.append(f"D. {cau[4]}")
-                        chon = st.radio("Đáp án:", opts, index=None)
+                        chon = st.radio("Lựa chọn:", opts, index=None)
                         if st.form_submit_button("CHỐT ĐÁP ÁN"):
                             if chon: 
                                 st.session_state['lua_chon'] = chon.split(".")[0]
                                 st.session_state['da_nop_cau'] = True
                                 st.rerun()
-                            else: st.warning("Chọn đáp án!")
+                            else: st.warning("Vui lòng chọn đáp án!")
                     time.sleep(1); st.rerun()
                 
-                # TRẠNG THÁI: ĐÃ CHỐT
                 else:
                     nguoi_chon = st.session_state['lua_chon']
                     dap_an_dung = str(cau[5]).strip().upper()
-                    if nguoi_chon == dap_an_dung: st.success("✅ CHÍNH XÁC!")
-                    else: st.error(f"❌ SAI RỒI! Đáp án đúng: {dap_an_dung}")
-                    if str(cau[6]).strip(): st.info(f"💡 {cau[6]}")
                     
-                    if st.button("CÂU TIẾP"):
+                    if nguoi_chon == dap_an_dung: 
+                        st.success("✅ CHÍNH XÁC!")
+                    else: 
+                        st.error(f"❌ SAI RỒI! Đáp án đúng là: {dap_an_dung}")
+                    
+                    if str(cau[6]).strip(): 
+                        st.info(f"💡 Giải thích: {cau[6]}")
+                    
+                    if st.button("CÂU TIẾP THEO"):
                         if nguoi_chon == dap_an_dung: st.session_state['diem_so'] += 1
                         st.session_state['chi_so'] += 1; st.session_state['da_nop_cau'] = False
                         st.session_state['thoi_gian_het'] = None
