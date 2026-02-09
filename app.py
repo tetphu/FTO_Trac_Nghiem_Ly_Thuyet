@@ -61,7 +61,7 @@ def kiem_tra_dang_nhap(db, user, pwd):
         rows = ws.get_all_values()
         for row in rows[1:]:
             if len(row) < 4: continue
-            # row[0]: User, row[1]: Pass, row[2]: Role, row[3]: Name, row[4]: Status
+            # Cột A: User, B: Pass, C: Role, D: Name, E: Status
             if str(row[0]).strip() == str(user).strip() and str(row[1]).strip() == str(pwd).strip():
                 status = str(row[4]).strip() if len(row) > 4 else "ChuaDuocThi"
                 role = str(row[2]).strip()
@@ -139,7 +139,6 @@ def main():
                 st.metric("🏆 ĐIỂM", f"{st.session_state['diem_so']}")
             st.divider()
             
-            # --- MENU PHÂN QUYỀN ---
             role = st.session_state['vai_tro']
             if role == 'Admin':
                 ds_chuc_nang = ["📖 GIÁO TRÌNH", "⚙️ QUẢN LÝ CÂU HỎI", "✅ QUẢN TRỊ USER (FULL)"]
@@ -154,14 +153,13 @@ def main():
             else:
                 menu = st.radio("MENU CHỨC NĂNG", ds_chuc_nang)
                 st.session_state['last_menu'] = menu
-                
                 st.write(""); st.write("")
                 if st.button("ĐĂNG XUẤT"):
                     for key in list(st.session_state.keys()): del st.session_state[key]
                     st.rerun()
 
         # ============================================================
-        # 1. CHỨC NĂNG QUẢN LÝ (ADMIN & GIẢNG VIÊN)
+        # 1. CHỨC NĂNG GIÁO TRÌNH & CÂU HỎI
         # ============================================================
         if "GIÁO TRÌNH" in menu:
             st.title("📚 TÀI LIỆU NỘI BỘ")
@@ -188,32 +186,40 @@ def main():
                     st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
                 except Exception as e: st.error(f"Lỗi: {e}")
 
-        # --- CHỨC NĂNG QUẢN LÝ USER / CẤP QUYỀN ---
+        # ============================================================
+        # 2. CHỨC NĂNG QUẢN TRỊ / CẤP QUYỀN (ĐÃ FIX LỖI KEYERROR)
+        # ============================================================
         elif "QUẢN TRỊ USER" in menu or "CẤP QUYỀN THI" in menu:
             is_admin = (st.session_state['vai_tro'] == 'Admin')
             
-            if is_admin:
-                st.title("🛡️ QUẢN TRỊ HỆ THỐNG (ADMIN)")
-                st.info("Bạn có toàn quyền chỉnh sửa tất cả tài khoản.")
-            else:
-                st.title("✅ CẤP QUYỀN THI")
-                st.info("Giảng viên chỉ thấy và chỉnh sửa danh sách Học viên.")
+            st.title("✅ QUẢN LÝ THI")
+            st.info("Chỉ huy có thể cấp quyền thi cho học viên tại đây.")
             
             ws_hv = db.worksheet("HocVien")
-            data_hv = ws_hv.get_all_records()
-            df_hv = pd.DataFrame(data_hv)
             
+            # --- [FIX QUAN TRỌNG] LẤY DỮ LIỆU & ÉP TÊN CỘT ---
+            all_rows = ws_hv.get_all_values()
+            # Bắt buộc đặt tên cột chuẩn để tránh lỗi KeyError
+            std_headers = ["Username", "Password", "Role", "HoTen", "TrangThai", "Diem"]
+            
+            if len(all_rows) > 1:
+                # Nếu file có dữ liệu, ép vào DataFrame với cột chuẩn
+                # Nếu cột thiếu, pandas sẽ báo lỗi, nhưng thường sheet sẽ đủ.
+                # Cách an toàn: Chỉ lấy 6 cột đầu tiên
+                data_clean = [r[:6] + [""]*(6-len(r)) for r in all_rows[1:]] 
+                df_hv = pd.DataFrame(data_clean, columns=std_headers)
+            else:
+                df_hv = pd.DataFrame(columns=std_headers)
+
             if not df_hv.empty:
-                # --- LOGIC LỌC DỮ LIỆU ---
+                # --- LOGIC LỌC ---
                 if is_admin:
-                    # Admin thấy hết
-                    df_display = df_hv
+                    df_display = df_hv # Admin thấy hết
                 else:
-                    # Giảng viên: Lọc bỏ Admin và GiangVien khác, chỉ lấy hocvien
-                    # (Giả sử role trong sheet ghi là 'hocvien', 'GiangVien', 'Admin')
+                    # Giảng viên chỉ thấy Role = 'hocvien'
                     df_display = df_hv[df_hv['Role'] == 'hocvien']
                 
-                # --- HIỂN THỊ BẢNG SỬA VỚI DROPDOWN ---
+                # --- HIỂN THỊ BẢNG ---
                 edited_df = st.data_editor(
                     df_display,
                     use_container_width=True,
@@ -221,59 +227,45 @@ def main():
                     column_config={
                         "TrangThai": st.column_config.SelectboxColumn(
                             "Trạng Thái Thi",
-                            help="Chọn trạng thái thi cho học viên",
-                            width="medium",
-                            options=[
-                                "ChuaDuocThi", # Chưa được phép
-                                "DuocThi",     # Đã cấp quyền
-                                "DangThi",     # Đang làm bài
-                                "DaThi",       # Đã xong
-                                "Khoa"         # Khóa tài khoản
-                            ],
+                            options=["ChuaDuocThi", "DuocThi", "DangThi", "DaThi", "Khoa"],
                             required=True,
+                            width="medium"
                         ),
                         "Role": st.column_config.SelectboxColumn(
                             "Vai Trò",
                             options=["hocvien", "GiangVien", "Admin"],
-                            required=True,
-                            disabled=not is_admin # Chỉ Admin mới sửa được Role
+                            disabled=not is_admin # GV không sửa được Role
+                        ),
+                        # Ẩn mật khẩu với GV
+                        "Password": st.column_config.TextColumn(
+                            "Mật khẩu",
+                            disabled=not is_admin,
+                            type="password" if not is_admin else "text" # GV thấy dấu ***
                         )
                     }
                 )
                 
                 if st.button("💾 LƯU CẬP NHẬT", type="primary"):
                     try:
-                        # LOGIC LƯU THÔNG MINH:
-                        # 1. Nếu là Admin: Lưu đè toàn bộ vì Admin thấy toàn bộ.
-                        # 2. Nếu là GV: Phải update các dòng đã sửa vào DataFrame gốc (df_hv)
-                        #    để không làm mất dữ liệu của Admin/GV khác.
-                        
+                        # Logic lưu: Merge dữ liệu sửa vào dữ liệu gốc
                         if is_admin:
                             final_df = edited_df
                         else:
-                            # Cập nhật các dòng của học viên vào bảng gốc
-                            # Dùng Username làm khóa chính để map
                             final_df = df_hv.copy()
-                            final_df.set_index(df_hv.columns[0], inplace=True) # Cột 0 là User
-                            edited_df.set_index(edited_df.columns[0], inplace=True)
-                            
+                            final_df.set_index("Username", inplace=True)
+                            edited_df.set_index("Username", inplace=True)
                             final_df.update(edited_df)
                             final_df.reset_index(inplace=True)
-                            edited_df.reset_index(inplace=True) # Reset lại để UI không lỗi
+                            edited_df.reset_index(inplace=True)
                         
-                        # Ghi vào Sheet
                         ws_hv.clear()
-                        # Lấy header
-                        headers_hv = list(data_hv[0].keys()) if data_hv else ["Username","Password","Role","HoTen","TrangThai","Diem"]
-                        rows_to_update = [headers_hv] + final_df.values.tolist()
-                        
-                        ws_hv.update(rows_to_update)
+                        ws_hv.update([std_headers] + final_df.values.tolist())
                         st.success("✅ Đã cập nhật thành công!")
                         time.sleep(1); st.rerun()
-                    except Exception as e: st.error(f"Lỗi cập nhật: {e}")
+                    except Exception as e: st.error(f"Lỗi: {e}")
 
         # ============================================================
-        # 2. CHỨC NĂNG THI (HỌC VIÊN)
+        # 3. CHỨC NĂNG THI
         # ============================================================
         elif "THI THỬ" in menu or "THI SÁT HẠCH" in menu:
             is_practice = "THI THỬ" in menu
@@ -286,93 +278,5 @@ def main():
                     with c2: st.markdown(f'<div class="gcpd-title">{exam_title}</div>', unsafe_allow_html=True)
                     st.divider()
                     
-                    if is_practice:
-                        st.info("ℹ️ Chế độ luyện tập: Random 10 câu. Không lưu điểm.")
-                    else:
-                        st.warning("⚠️ BÀI THI CHÍNH THỨC.\n\n- Yêu cầu trạng thái: 'DuocThi'.\n- Thoát ra = VI PHẠM.")
-                    
-                    if st.form_submit_button("BẮT ĐẦU NGAY", type="primary"):
-                        if is_practice:
-                            st.session_state['loai_thi'] = 'thu'
-                            all_qs = db.worksheet("CauHoi").get_all_values()
-                            if len(all_qs) > 1:
-                                selected_qs = random.sample(all_qs[1:], min(10, len(all_qs[1:])))
-                                st.session_state['ds_cau_hoi'] = selected_qs
-                                st.session_state['bat_dau'] = True
-                                st.rerun()
-                            else: st.error("Lỗi dữ liệu câu hỏi.")
-                            
-                        else:
-                            # Check trạng thái realtime
-                            try:
-                                cell = db.worksheet("HocVien").find(st.session_state['user'])
-                                status_now = db.worksheet("HocVien").cell(cell.row, 5).value
-                            except: status_now = "Loi"
-
-                            if status_now == "DuocThi":
-                                st.session_state['loai_thi'] = 'that'
-                                cap_nhat_trang_thai(db, st.session_state['user'], "DangThi")
-                                all_qs = db.worksheet("CauHoi").get_all_values()
-                                st.session_state['ds_cau_hoi'] = all_qs[1:] if len(all_qs) > 1 else []
-                                st.session_state['bat_dau'] = True
-                                st.rerun()
-                                
-                            elif status_now == "DaThi": st.error("⛔ Bạn đã thi xong rồi.")
-                            elif status_now == "DangThi" or status_now == "VI_PHAM": st.error("🚨 Tài khoản đang bị khóa.")
-                            else: st.error("⛔ Bạn CHƯA ĐƯỢC CẤP QUYỀN (Trạng thái phải là 'DuocThi').")
-
-            else:
-                ds = st.session_state['ds_cau_hoi']
-                idx = st.session_state['chi_so']
-
-                if idx >= len(ds):
-                    st.balloons()
-                    st.success(f"🏁 KẾT QUẢ: {st.session_state['diem_so']} / {len(ds)}")
-                    if st.button("KẾT THÚC", type="primary"):
-                        if st.session_state['loai_thi'] == 'that':
-                            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
-                        for key in list(st.session_state.keys()): del st.session_state[key]
-                        st.rerun()
-                    st.stop()
-
-                cau = ds[idx]
-                while len(cau) < 7: cau.append("")
-
-                if not st.session_state['da_nop_cau']:
-                    if st.session_state['thoi_gian_het'] is None: 
-                        st.session_state['thoi_gian_het'] = time.time() + THOI_GIAN_MOI_CAU
-                    con_lai = int(st.session_state['thoi_gian_het'] - time.time())
-                    if con_lai <= 0: st.session_state['da_nop_cau'] = True; st.session_state['lua_chon'] = None; st.rerun()
-
-                    c_time, c_score = st.columns([2.5,1])
-                    c_time.progress(max(0.0, min(1.0, con_lai/THOI_GIAN_MOI_CAU))); c_time.caption(f"⏳ {con_lai}s")
-                    c_score.markdown(f"**Đ: {st.session_state['diem_so']}**")
-
-                    with st.form(f"q_{idx}"):
-                        st.markdown(f"**Câu {idx+1}: {cau[0]}**")
-                        opts = [f"A. {cau[1]}", f"B. {cau[2]}", f"C. {cau[3]}"]
-                        if str(cau[4]).strip(): opts.append(f"D. {cau[4]}")
-                        chon = st.radio("Đáp án:", opts, index=None)
-                        if st.form_submit_button("CHỐT ĐÁP ÁN"):
-                            if chon: 
-                                st.session_state['lua_chon'] = chon.split(".")[0]
-                                st.session_state['da_nop_cau'] = True
-                                st.rerun()
-                            else: st.warning("Chọn đáp án!")
-                    time.sleep(1); st.rerun()
-                
-                else:
-                    nguoi_chon = st.session_state['lua_chon']
-                    dap_an_dung = str(cau[5]).strip().upper()
-                    if nguoi_chon == dap_an_dung: st.success("✅ CHÍNH XÁC!")
-                    else: st.error(f"❌ SAI RỒI! Đáp án đúng: {dap_an_dung}")
-                    if str(cau[6]).strip(): st.info(f"💡 {cau[6]}")
-                    
-                    if st.button("CÂU TIẾP"):
-                        if nguoi_chon == dap_an_dung: st.session_state['diem_so'] += 1
-                        st.session_state['chi_so'] += 1; st.session_state['da_nop_cau'] = False
-                        st.session_state['thoi_gian_het'] = None
-                        st.rerun()
-
-if __name__ == "__main__":
-    main()
+                    if is_practice: st.info("ℹ️ Chế độ luyện tập: Random 10 câu. Không lưu điểm.")
+                    else: st.warning("⚠️ BÀI THI CH
