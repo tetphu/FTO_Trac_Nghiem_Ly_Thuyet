@@ -11,7 +11,7 @@ try:
     import pandas as pd
     import random
 except ImportError as e:
-    st.error(f"Loi thu vien: {e}")
+    st.error(f"❌ LỖI: Thiếu thư viện. Hãy kiểm tra file requirements.txt.\nChi tiết: {e}")
     st.stop()
 
 THOI_GIAN_MOI_CAU = 30
@@ -22,32 +22,38 @@ def inject_css():
         <style>
         .block-container { padding-top: 1rem; padding-bottom: 5rem; }
         header, footer { visibility: hidden; }
+        
         .gcpd-title {
             font-family: sans-serif; color: #002147; 
             font-size: 24px; font-weight: 900; text-align: center;
             text-transform: uppercase; margin-bottom: 20px;
         }
+        
         .timer-digital {
             font-size: 45px; font-weight: 900; color: #d32f2f;
             text-align: center; background-color: #ffebee;
             border: 2px solid #d32f2f; border-radius: 12px;
             width: 120px; margin: 0 auto 20px auto;
-            padding: 5px;
+            padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+
         .question-box {
             background-color: #ffffff; padding: 20px; border-radius: 10px;
             border: 2px solid #002147;
             font-size: 18px; font-weight: bold; color: #002147;
-            margin-bottom: 15px;
+            margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
+
         .explanation-box {
             background-color: #e8f5e9; padding: 15px;
             border-radius: 8px; border-left: 5px solid #4caf50;
-            margin-top: 15px; color: #1b5e20;
+            margin-top: 15px; color: #1b5e20; font-size: 16px;
         }
+
         .stButton button {
             background-color: #002147 !important; color: #FFD700 !important;
             font-weight: bold !important; width: 100%; padding: 12px !important;
+            border-radius: 8px !important; font-size: 16px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -63,7 +69,7 @@ def ket_noi_csdl():
         client = gspread.authorize(creds)
         return client.open("HeThongTracNghiem")
     except Exception as e:
-        st.error(f"Loi ket noi: {e}")
+        st.error(f"❌ LỖI KẾT NỐI: {e}")
         return None
 
 # --- 5. HÀM XỬ LÝ ---
@@ -148,131 +154,4 @@ def main():
             headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
             clean = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
             df = pd.DataFrame(clean, columns=headers)
-            edited = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-            if st.button("LƯU"):
-                ws.clear(); ws.update([headers] + edited.values.tolist())
-                st.success("Đã lưu!")
-
-        # 2. QUẢN TRỊ USER (ĐÃ FIX LỖI KEYERROR VÀ TYPEERROR)
-        elif menu == "QUẢN TRỊ USER" or menu == "CẤP QUYỀN THI":
-            st.info("✅ QUẢN LÝ TRẠNG THÁI")
-            ws = db.worksheet("HocVien")
-            vals = ws.get_all_values()
-            
-            # Ép tên cột chuẩn (Fix lỗi KeyError)
-            headers = ["Username","Password","Role","HoTen","TrangThai","Diem"]
-            clean = [r[:6]+[""]*(6-len(r)) for r in vals[1:]] if len(vals)>1 else []
-            df = pd.DataFrame(clean, columns=headers)
-            
-            if role != 'Admin': df = df[df['Role'] == 'hocvien']
-            
-            # Cấu hình bảng (Bỏ type='password' để tránh lỗi TypeError)
-            edited = st.data_editor(df, use_container_width=True,
-                column_config={
-                    "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
-                    "Role": st.column_config.SelectboxColumn("Vai Trò", options=["hocvien","GiangVien","Admin"], disabled=(role!='Admin'))
-                }
-            )
-            if st.button("LƯU TRẠNG THÁI"):
-                full_df = pd.DataFrame([r[:6]+[""]*(6-len(r)) for r in vals[1:]], columns=headers)
-                full_df.set_index("Username", inplace=True); edited.set_index("Username", inplace=True)
-                full_df.update(edited); full_df.reset_index(inplace=True)
-                ws.clear(); ws.update([headers] + full_df.values.tolist())
-                st.success("Đã cập nhật!"); time.sleep(1); st.rerun()
-
-        # 3. GIÁO TRÌNH
-        elif menu == "GIÁO TRÌNH":
-            st.title("📚 TÀI LIỆU")
-            data = lay_giao_trinh(db)
-            for l in data:
-                with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                    st.write(l.get('NoiDung',''))
-                    if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
-
-        # 4. THI CỬ (ĐÃ FIX LOGIC HIỂN THỊ NÚT)
-        elif "THI" in menu or menu == "ĐANG THI":
-            if not st.session_state['bat_dau']:
-                mode = 'thu' if "THỬ" in menu else 'that'
-                # Đã sửa lỗi SyntaxError
-                title = "LUYỆN TẬP" if mode=='thu' else "SÁT HẠCH CHÍNH THỨC"
-                st.subheader(title)
-                
-                if st.button("BẮT ĐẦU"):
-                    if mode == 'that':
-                        try:
-                            c = db.worksheet("HocVien").find(st.session_state['user'])
-                            s = db.worksheet("HocVien").cell(c.row, 5).value
-                            if s != "DuocThi": st.error(f"Chưa được cấp quyền! ({s})"); st.stop()
-                            cap_nhat_trang_thai(db, st.session_state['user'], "DangThi")
-                        except: st.error("Lỗi user"); st.stop()
-
-                    qs = db.worksheet("CauHoi").get_all_values()
-                    lst = qs[1:] if len(qs)>1 else []
-                    if mode=='thu' and len(lst)>0: lst = random.sample(lst, min(10, len(lst)))
-                    st.session_state.update(bat_dau=True, ds_cau_hoi=lst, chi_so=0, diem_so=0, loai_thi=mode)
-                    st.rerun()
-            else:
-                qs = st.session_state['ds_cau_hoi']
-                idx = st.session_state['chi_so']
-                
-                # KẾT THÚC
-                if idx >= len(qs):
-                    st.balloons()
-                    st.success(f"KẾT QUẢ: {st.session_state['diem_so']} / {len(qs)}")
-                    if st.button("KẾT THÚC VÀ NỘP BÀI"):
-                        if st.session_state['loai_thi'] == 'that':
-                            luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
-                        st.session_state.clear(); st.rerun()
-                    st.stop()
-                
-                q = qs[idx]
-                while len(q)<7: q.append("")
-                
-                # --- PHẦN 1: ĐANG SUY NGHĨ ---
-                if not st.session_state['da_nop_cau']:
-                    if not st.session_state['thoi_gian_het']: st.session_state['thoi_gian_het'] = time.time()+THOI_GIAN_MOI_CAU
-                    left = int(st.session_state['thoi_gian_het'] - time.time())
-                    
-                    if left<=0: 
-                        st.session_state.update(da_nop_cau=True, lua_chon=None)
-                        st.rerun()
-                    
-                    st.markdown(f"<div class='timer-digital'>⏳ {left}</div>", unsafe_allow_html=True)
-                    st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
-                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
-                    
-                    ans = st.radio("Lựa chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key="radio_running")
-                    
-                    st.write("")
-                    if st.button("CHỐT ĐÁP ÁN"):
-                        st.session_state.update(da_nop_cau=True, lua_chon=ans.split('.')[0] if ans else None)
-                        st.rerun()
-                    
-                    time.sleep(1); st.rerun()
-                
-                # --- PHẦN 2: ĐÃ TRẢ LỜI ---
-                else:
-                    st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
-                    st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
-                    
-                    st.radio("Bạn đã chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], 
-                             index=["A","B","C","D"].index(st.session_state['lua_chon']) if st.session_state['lua_chon'] else None,
-                             disabled=True, key="radio_finished")
-
-                    res = st.session_state['lua_chon']
-                    true_ans = str(q[5]).strip().upper()
-                    
-                    if res == true_ans: st.success(f"✅ CHÍNH XÁC! (Đáp án: {res})")
-                    else: st.error(f"❌ SAI RỒI! Bạn chọn: {res if res else '...'} - Đúng là: {true_ans}")
-                    
-                    if str(q[6]).strip():
-                        st.markdown(f"<div class='explanation-box'>💡 <b>Giải thích:</b> {q[6]}</div>", unsafe_allow_html=True)
-                    
-                    st.write("")
-                    if st.button("CÂU TIẾP THEO ➡️"):
-                        if res == true_ans: st.session_state['diem_so'] += 1
-                        st.session_state.update(chi_so=idx+1, da_nop_cau=False, thoi_gian_het=None)
-                        st.rerun()
-
-if __name__ == "__main__":
-    main()
+            edited = st.
