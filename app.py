@@ -26,33 +26,33 @@ def inject_css():
     st.markdown("""
         <style>
         .block-container {
-            padding-top: 3rem !important;
-            padding-bottom: 2rem !important;
+            padding-top: 5rem !important;
+            padding-bottom: 3rem !important;
             max-width: 900px;
         }
         .gcpd-title {
-            color: #002147; font-size: 20px; font-weight: 900; 
+            color: #002147; font-size: 22px; font-weight: 900; 
             text-align: center; text-transform: uppercase; 
-            margin-bottom: 0px; letter-spacing: 0.5px;
+            margin-bottom: 5px; letter-spacing: 1px;
         }
         .user-info {
-            background-color: #f8f9fa; color: #002147;
-            padding: 2px 10px; border-radius: 15px;
-            font-size: 12px; font-weight: 700; text-align: center;
-            border: 1px solid #dee2e6; display: inline-block;
+            background-color: #f1f3f4; color: #002147;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 13px; font-weight: 700; text-align: center;
+            border: 1px solid #dadce0; display: inline-block;
         }
         
         /* STICKY TABS */
         div[data-baseweb="tab-list"] {
-            position: sticky; top: 2.8rem; z-index: 999;
+            position: sticky; top: 3rem; z-index: 999;
             background-color: white; padding-top: 10px;
-            border-bottom: 1px solid #eee; gap: 2px;
+            border-bottom: 1px solid #eee; gap: 4px;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 32px; padding: 0 10px;
-            background-color: #f8f9fa; border-radius: 4px 4px 0 0;
-            color: #555; font-size: 11px; font-weight: 700;
-            border: 1px solid #eee; border-bottom: none; flex-grow: 1;
+            height: 35px; padding: 0 12px;
+            background-color: #fff; border-radius: 6px 6px 0 0;
+            color: #555; font-size: 12px; font-weight: 700;
+            border: 1px solid #eee; border-bottom: none;
         }
         .stTabs [aria-selected="true"] {
             background-color: #002147 !important; color: #FFD700 !important;
@@ -60,21 +60,22 @@ def inject_css():
         }
 
         .question-box {
-            background: #fff; padding: 12px; border-left: 3px solid #002147;
+            background: #fff; padding: 15px; 
+            border-left: 3px solid #002147;
             border-radius: 4px; font-weight: 600; color: #333; 
-            margin-bottom: 8px; font-size: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            margin-bottom: 10px; font-size: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .timer-box {
-            font-family: monospace; font-size: 24px; font-weight: bold; color: #d32f2f;
-            text-align: center; background: #fff; border: 1px solid #ef9a9a;
-            border-radius: 6px; width: 70px; margin: 0 auto 10px auto;
+            font-family: monospace; font-size: 28px; font-weight: bold; color: #d32f2f;
+            text-align: center; background: #fff; border: 2px solid #ffcdd2;
+            border-radius: 8px; width: 80px; margin: 0 auto 10px auto;
         }
         .stButton button {
             background: #002147 !important; color: #FFD700 !important;
-            font-weight: 700 !important; font-size: 12px !important;
-            padding: 0.3rem 0.8rem !important; min-height: 35px !important;
-            border-radius: 4px !important; border: none !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+            font-weight: 700 !important; font-size: 13px !important;
+            padding: 0.4rem 1rem !important; border-radius: 4px !important;
+            border: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
         }
         .stButton button:hover { transform: translateY(-1px); }
         
@@ -82,12 +83,12 @@ def inject_css():
              background: white !important; color: #d32f2f !important;
              border: 1px solid #d32f2f !important; box-shadow: none !important;
         }
-        .stRadio > div {gap: 5px;}
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
-# --- 4. KẾT NỐI DATABASE ---
+# --- 4. KẾT NỐI DATABASE (CÓ CACHING ĐỂ SỬA LỖI 429) ---
+@st.cache_resource
 def ket_noi_csdl():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -97,12 +98,12 @@ def ket_noi_csdl():
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         return gspread.authorize(creds).open("HeThongTracNghiem")
     except Exception as e:
-        st.error(f"Lỗi kết nối: {e}")
         return None
 
-# --- 5. HÀM XỬ LÝ ---
+# --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
+        # Không cache login để đảm bảo bảo mật và cập nhật trạng thái mới nhất
         rows = db.worksheet("HocVien").get_all_values()
         for r in rows[1:]:
             if len(r) < 3: continue
@@ -117,13 +118,21 @@ def save_to_sheet(db, sheet_name, df_to_save):
         ws.clear()
         data = [df_to_save.columns.tolist()] + df_to_save.values.tolist()
         ws.update(data)
+        st.cache_data.clear() # Xóa cache sau khi lưu để cập nhật dữ liệu mới
         return True
     except Exception as e:
         st.error(f"Lỗi lưu: {e}")
         return False
 
-def get_exams(db):
-    try: return db.worksheet("CauHoi").get_all_values()
+# Cache dữ liệu câu hỏi để tránh đọc liên tục gây lỗi 429
+@st.cache_data(ttl=300) 
+def get_exams(_db):
+    try: return _db.worksheet("CauHoi").get_all_values()
+    except: return []
+
+@st.cache_data(ttl=300)
+def get_giao_trinh(_db):
+    try: return _db.worksheet("GiaoTrinh").get_all_records()
     except: return []
 
 def render_mixed_content(content):
@@ -133,7 +142,7 @@ def render_mixed_content(content):
         line = line.strip()
         if line.startswith(('http://', 'https://')):
             try: st.image(line, use_column_width=True)
-            except: st.error(f"⚠️ Lỗi ảnh: {line}")
+            except: st.error("Lỗi ảnh")
         elif line: st.markdown(line, unsafe_allow_html=True)
 
 # --- 6. MAIN ---
@@ -150,7 +159,9 @@ def main():
     if 'choice' not in st.session_state: st.session_state.choice = None
 
     db = ket_noi_csdl()
-    if not db: st.stop()
+    if not db: 
+        st.error("Không thể kết nối Database. Vui lòng kiểm tra lại.")
+        st.stop()
 
     # --- A. LOGIN ---
     if st.session_state.vai_tro is None:
@@ -172,7 +183,6 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER
         c1, c2, c3 = st.columns([1, 4, 1], gap="small")
         with c1: 
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=40)
@@ -200,17 +210,11 @@ def main():
 
         # --- LOGIC THI CỬ ---
         if st.session_state.bat_dau:
-            # HIỂN THỊ TRẠNG THÁI
             if st.session_state.mode == 'thu':
                 st.info("📝 THI THỬ")
                 if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
-                    st.session_state.chi_so = 0
-                    st.session_state.diem_so = 0
-                    st.session_state.da_nop = False
-                    st.session_state.time_end = None
-                    st.session_state.choice = None
                     st.rerun()
             else:
                 st.error("🚨 SÁT HẠCH CHÍNH THỨC")
@@ -229,40 +233,25 @@ def main():
                             ws.update_cell(cell.row, 5, "DaThi")
                             ws.update_cell(cell.row, 6, str(st.session_state.diem_so))
                         except: pass
-                    # Reset toàn bộ
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
-                    st.session_state.chi_so = 0
-                    st.session_state.diem_so = 0
-                    st.session_state.da_nop = False
-                    st.session_state.time_end = None
                     st.rerun()
                 st.stop()
 
             q = qs[idx]
-            # --- FIX AN TOÀN DỮ LIỆU ---
-            # 1. Đảm bảo q có đủ cột, nếu thiếu thì bù chuỗi rỗng
-            while len(q) < 7: q.append("")
+            while len(q)<7: q.append("")
             
-            # 2. Kiểm tra nếu câu hỏi rỗng thì báo lỗi (tránh crash)
-            if not q[0] or str(q[0]).strip() == "":
-                st.warning(f"⚠️ Câu hỏi số {idx+1} bị lỗi dữ liệu (trống). Đang chuyển câu tiếp...")
-                st.session_state.chi_so += 1
-                st.rerun()
-
-            # --- GIAO DIỆN CÂU HỎI ---
             if not st.session_state.da_nop:
                 if not st.session_state.time_end: st.session_state.time_end = time.time() + THOI_GIAN_THI
                 left = int(st.session_state.time_end - time.time())
                 if left <= 0: st.session_state.da_nop = True; st.session_state.choice = None; st.rerun()
 
                 st.markdown(f"<div class='timer-box'>⏳ {left}</div>", unsafe_allow_html=True)
-                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                st.markdown(f"**Câu {idx+1}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 
-                # --- FIX QUAN TRỌNG: KEY ĐỘNG (Dynamic Key) ---
-                # Key thay đổi theo chỉ số câu hỏi (radio_q0, radio_q1...) -> Không bao giờ bị trùng
-                ans = st.radio("Chọn đáp án:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key=f"radio_q{idx}")
+                # Dynamic Key để tránh lỗi duplicate ID
+                ans = st.radio("Chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key=f"q_{idx}")
                 
                 st.write("")
                 if st.button("CHỐT ĐÁP ÁN"):
@@ -270,7 +259,7 @@ def main():
                     st.session_state.da_nop = True; st.rerun()
                 time.sleep(1); st.rerun()
             else:
-                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                st.markdown(f"**Câu {idx+1}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 res = st.session_state.choice
                 true = str(q[5]).strip().upper()
@@ -284,7 +273,6 @@ def main():
                     st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
 
         else:
-            # --- NỘI DUNG TAB ---
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
@@ -322,22 +310,22 @@ def main():
 
                 with tabs[2]:
                     st.subheader("📚 TÀI LIỆU")
-                    try:
-                        g_data = db.worksheet("GiaoTrinh").get_all_records()
-                        for l in g_data:
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
                             with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
                                 render_mixed_content(l.get('NoiDung',''))
-                    except: st.warning("Chưa có giáo trình.")
+                    else: st.warning("Chưa có giáo trình.")
 
             elif active_tab == "HV":
                 with tabs[0]: 
                     st.subheader("📚 TÀI LIỆU ÔN TẬP")
-                    try:
-                        g_data = db.worksheet("GiaoTrinh").get_all_records()
-                        for l in g_data:
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
                             with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
                                 render_mixed_content(l.get('NoiDung',''))
-                    except: st.warning("Chưa có dữ liệu.")
+                    else: st.warning("Chưa có dữ liệu.")
 
                 with tabs[1]:
                     c1, c2 = st.columns(2)
@@ -345,14 +333,8 @@ def main():
                         if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]; 
                             if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
-                            st.session_state.bat_dau = True
-                            st.session_state.ds_cau_hoi = qs
-                            st.session_state.chi_so = 0
-                            st.session_state.diem_so = 0
-                            st.session_state.da_nop = False
-                            st.session_state.time_end = None
-                            st.session_state.choice = None
-                            st.session_state.mode = 'thu'
+                            st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
+                            st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
                         if st.button("🚨 SÁT HẠCH"):
@@ -366,16 +348,9 @@ def main():
                             except Exception as e: msg = f"Lỗi: {str(e)}"
 
                             if allow:
-                                qs = get_exams(db)[1:]
-                                st.session_state.bat_dau = True
-                                st.session_state.ds_cau_hoi = qs
-                                st.session_state.chi_so = 0
-                                st.session_state.diem_so = 0
-                                st.session_state.da_nop = False
-                                st.session_state.time_end = None
-                                st.session_state.choice = None
-                                st.session_state.mode = 'that'
-                                st.rerun()
+                                qs = get_exams(db)[1:]; st.session_state.bat_dau = True
+                                st.session_state.ds_cau_hoi = qs; st.session_state.chi_so = 0
+                                st.session_state.diem_so = 0; st.session_state.mode = 'that'; st.rerun()
                             else: st.error(msg)
 
 if __name__ == "__main__":
