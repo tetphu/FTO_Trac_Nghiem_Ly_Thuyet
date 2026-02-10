@@ -11,12 +11,12 @@ try:
     import pandas as pd
     import random
 except ImportError:
-    st.error("Lỗi: Thiếu thư viện. Hãy kiểm tra file requirements.txt")
+    st.error("Lỗi thư viện. Hãy kiểm tra requirements.txt (cần: streamlit, gspread, oauth2client, pandas)")
     st.stop()
 
-THOI_GIAN = 30
+THOI_GIAN_THI = 30
 
-# --- 3. CSS (ĐÃ RÚT GỌN ĐỂ TRÁNH LỖI) ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
@@ -44,32 +44,30 @@ def ket_noi_csdl():
         st.error(f"Lỗi kết nối: {e}")
         return None
 
-# --- 5. HÀM XỬ LÝ ---
+# --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
+        # Lấy toàn bộ dữ liệu để tránh lỗi sót dòng
         rows = db.worksheet("HocVien").get_all_values()
         for r in rows[1:]:
             if len(r) < 3: continue
+            # Col 0=User, 1=Pass, 2=Role, 3=Name, 4=Status
             if str(r[0]).strip() == str(u).strip() and str(r[1]).strip() == str(p).strip():
-                # Col 2=Role, 3=Name, 4=Status
                 return str(r[2]).strip(), str(r[3]).strip(), (str(r[4]).strip() if len(r)>4 else "ChuaDuocThi")
     except: pass
     return None, None, None
 
-def save_data(db, sheet_name, data):
+def save_to_sheet(db, sheet_name, df_to_save):
     try:
         ws = db.worksheet(sheet_name)
         ws.clear()
+        # Chuyển DataFrame thành list để ghi vào Sheet (bao gồm cả Header)
+        data = [df_to_save.columns.tolist()] + df_to_save.values.tolist()
         ws.update(data)
         return True
-    except: return False
-
-def update_status(db, user, stt):
-    try:
-        ws = db.worksheet("HocVien")
-        cell = ws.find(user)
-        ws.update_cell(cell.row, 5, stt)
-    except: pass
+    except Exception as e:
+        st.error(f"Lỗi khi lưu: {e}")
+        return False
 
 def get_exams(db):
     try: return db.worksheet("CauHoi").get_all_values()
@@ -79,7 +77,7 @@ def get_exams(db):
 def main():
     inject_css()
     
-    # Khởi tạo Session State từng dòng để tránh lỗi Syntax
+    # Khởi tạo Session State
     if 'vai_tro' not in st.session_state: st.session_state.vai_tro = None
     if 'bat_dau' not in st.session_state: st.session_state.bat_dau = False
     if 'diem_so' not in st.session_state: st.session_state.diem_so = 0
@@ -92,7 +90,7 @@ def main():
     db = ket_noi_csdl()
     if not db: st.stop()
 
-    # --- MÀN HÌNH LOGIN ---
+    # --- MÀN HÌNH ĐĂNG NHẬP ---
     if st.session_state.vai_tro is None:
         c1, c2 = st.columns([1, 2.5])
         with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
@@ -112,81 +110,101 @@ def main():
 
     # --- MÀN HÌNH CHÍNH ---
     else:
+        # Header
         c_info, c_logout = st.columns([3, 1])
         with c_info: st.markdown(f"<div class='user-info'>👮 {st.session_state.ho_ten} ({st.session_state.vai_tro})</div>", unsafe_allow_html=True)
         with c_logout:
             if st.button("THOÁT"):
                 st.session_state.clear()
                 st.rerun()
-        
         st.divider()
         
+        # Menu Navigation
         role = st.session_state.vai_tro
-        menu_items = ["THI THỬ", "THI SÁT HẠCH"]
         if role == 'Admin': menu_items = ["QUẢN TRỊ USER", "QUẢN LÝ CÂU HỎI", "GIÁO TRÌNH"]
         elif role == 'GiangVien': menu_items = ["CẤP QUYỀN THI", "QUẢN LÝ CÂU HỎI", "GIÁO TRÌNH"]
+        else: menu_items = ["THI THỬ", "THI SÁT HẠCH"]
 
         if st.session_state.bat_dau:
             menu = "ĐANG THI"
             st.info("⚠️ ĐANG LÀM BÀI...")
         else:
             menu = st.radio("CHỨC NĂNG:", menu_items, horizontal=True)
-        
         st.write("")
 
-        # --- 1. QUẢN LÝ CÂU HỎI ---
-        if menu == "QUẢN LÝ CÂU HỎI":
-            st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
-            vals = get_exams(db)
-            headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
-            # Fix lỗi cột
-            data = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
-            df = pd.DataFrame(data, columns=headers)
-            edited = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-            if st.button("LƯU CÂU HỎI"):
-                save_data(db, "CauHoi", [headers] + edited.values.tolist())
-                st.success("Đã lưu!")
-
-        # --- 2. QUẢN TRỊ USER ---
-        elif menu in ["QUẢN TRỊ USER", "CẤP QUYỀN THI"]:
+        # =========================================================
+        # CHỨC NĂNG 1: QUẢN TRỊ USER / CẤP QUYỀN (ĐÃ SỬA LỖI)
+        # =========================================================
+        if menu in ["QUẢN TRỊ USER", "CẤP QUYỀN THI"]:
             st.subheader("✅ QUẢN LÝ HỌC VIÊN")
+            
+            # 1. Lấy toàn bộ dữ liệu
             vals = db.worksheet("HocVien").get_all_values()
             headers = ["Username","Password","Role","HoTen","TrangThai","Diem"]
-            data = [r[:6]+[""]*(6-len(r)) for r in vals[1:]] if len(vals)>1 else []
             
-            full_df = pd.DataFrame(data, columns=headers)
-            view_df = full_df if role == 'Admin' else full_df[full_df['Role'] == 'hocvien']
+            # Ép dữ liệu vào đúng 6 cột để tránh lỗi lệch cột
+            clean_data = [r[:6]+[""]*(6-len(r)) for r in vals[1:]] if len(vals)>1 else []
+            full_df = pd.DataFrame(clean_data, columns=headers)
+            
+            # 2. Phân chia dữ liệu hiển thị
+            if role == 'Admin':
+                # Admin thấy hết
+                df_to_edit = full_df
+            else:
+                # Giảng viên chỉ thấy 'hocvien', ẩn Admin/GiangVien khác
+                df_to_edit = full_df[full_df['Role'] == 'hocvien']
+                # Lưu lại phần bị ẩn để lát nữa gộp lại
+                df_hidden = full_df[full_df['Role'] != 'hocvien']
 
-            edited = st.data_editor(
-                view_df,
+            # 3. Hiển thị bảng Editor
+            edited_df = st.data_editor(
+                df_to_edit,
                 use_container_width=True,
-                num_rows="dynamic",
+                num_rows="dynamic", # Cho phép THÊM/XÓA dòng
                 hide_index=True,
                 column_config={
                     "TrangThai": st.column_config.SelectboxColumn("Status", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
-                    "Role": st.column_config.SelectboxColumn("Role", options=["hocvien","GiangVien","Admin"], disabled=(role!='Admin')),
-                    "Password": st.column_config.TextColumn("Pass") # Bỏ type=password để fix lỗi TypeError
+                    "Role": st.column_config.SelectboxColumn("Role", options=["hocvien","GiangVien","Admin"], required=True),
+                    "Password": st.column_config.TextColumn("Password") 
                 }
             )
 
+            # 4. Nút Lưu (LOGIC QUAN TRỌNG)
             if st.button("LƯU THAY ĐỔI"):
                 if role == 'Admin':
-                    final_data = [headers] + edited.values.tolist()
+                    # Admin ghi đè tất cả (bao gồm cả dòng xóa/thêm)
+                    final_df = edited_df
                 else:
-                    full_df.set_index("Username", inplace=True)
-                    edited.set_index("Username", inplace=True)
-                    full_df.update(edited)
-                    # Thêm dòng mới
-                    new_rows = edited.index.difference(full_df.index)
-                    if not new_rows.empty: full_df = pd.concat([full_df, edited.loc[new_rows]])
-                    full_df.reset_index(inplace=True)
-                    final_data = [headers] + full_df.values.tolist()
+                    # Giảng viên: Gộp phần ẩn + phần vừa sửa
+                    # Dòng nào bị xóa trong edited_df sẽ mất luôn -> Đúng logic xóa
+                    # Dòng nào thêm mới trong edited_df sẽ được gộp vào -> Đúng logic thêm
+                    final_df = pd.concat([df_hidden, edited_df], ignore_index=True)
                 
-                save_data(db, "HocVien", final_data)
-                st.success("Đã cập nhật!")
-                time.sleep(1); st.rerun()
+                # Ghi vào Google Sheet
+                if save_to_sheet(db, "HocVien", final_df):
+                    st.success("✅ Đã cập nhật thành công! (Đã xóa/thêm/sửa)")
+                    time.sleep(1)
+                    st.rerun()
 
-        # --- 3. GIÁO TRÌNH ---
+        # =========================================================
+        # CHỨC NĂNG 2: QUẢN LÝ CÂU HỎI
+        # =========================================================
+        elif menu == "QUẢN LÝ CÂU HỎI":
+            st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
+            vals = get_exams(db)
+            headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
+            data = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
+            df = pd.DataFrame(data, columns=headers)
+            
+            edited = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+            if st.button("LƯU CÂU HỎI"):
+                if save_to_sheet(db, "CauHoi", edited):
+                    st.success("Đã lưu!")
+                    time.sleep(1); st.rerun()
+
+        # =========================================================
+        # CHỨC NĂNG 3: GIÁO TRÌNH
+        # =========================================================
         elif menu == "GIÁO TRÌNH":
             st.subheader("📚 TÀI LIỆU")
             try:
@@ -197,7 +215,9 @@ def main():
                         if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
             except: st.warning("Chưa có dữ liệu.")
 
-        # --- 4. THI CỬ ---
+        # =========================================================
+        # CHỨC NĂNG 4: THI CỬ
+        # =========================================================
         elif "THI" in menu or menu == "ĐANG THI":
             # CHUẨN BỊ
             if not st.session_state.bat_dau:
@@ -207,11 +227,15 @@ def main():
                 if st.button("BẮT ĐẦU"):
                     if mode == 'that':
                         try:
+                            # Check trạng thái real-time từ sheet
                             ws = db.worksheet("HocVien")
                             cell = ws.find(st.session_state.user)
                             stt = ws.cell(cell.row, 5).value
-                            if stt != "DuocThi": st.error(f"Chưa được cấp quyền! ({stt})"); st.stop()
-                            update_status(db, st.session_state.user, "DangThi")
+                            if stt != "DuocThi": 
+                                st.error(f"Chưa được cấp quyền! Trạng thái hiện tại: {stt}")
+                                st.stop()
+                            # Cập nhật DangThi
+                            ws.update_cell(cell.row, 5, "DangThi")
                         except: st.error("Lỗi User"); st.stop()
 
                     qs = get_exams(db)[1:]
@@ -224,7 +248,7 @@ def main():
                     st.session_state.loai_thi = mode
                     st.rerun()
 
-            # ĐANG LÀM
+            # ĐANG LÀM BÀI
             else:
                 qs = st.session_state.ds_cau_hoi
                 idx = st.session_state.chi_so
@@ -251,7 +275,7 @@ def main():
                 # CHƯA CHỐT
                 if not st.session_state.da_nop:
                     if not st.session_state.time_end:
-                        st.session_state.time_end = time.time() + THOI_GIAN
+                        st.session_state.time_end = time.time() + THOI_GIAN_THI
                     
                     left = int(st.session_state.time_end - time.time())
                     if left <= 0:
