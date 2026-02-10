@@ -21,59 +21,119 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN ---
+# --- 3. CSS GIAO DIỆN (ĐÃ NÂNG CẤP PRO) ---
 def inject_css():
     st.markdown("""
         <style>
-        .block-container {padding-top: 3rem !important; padding-bottom: 5rem !important;}
+        /* Tinh chỉnh khoảng cách chung */
+        .block-container {
+            padding-top: 2rem !important; 
+            padding-bottom: 3rem !important;
+            max-width: 800px; /* Giới hạn chiều rộng trên PC cho đẹp */
+        }
         
+        /* Header Title */
         .gcpd-title {
-            color:#002147; font-size:28px; font-weight:900; 
-            text-align:center; text-transform:uppercase; margin-bottom:20px;
+            color: #002147; font-size: 24px; font-weight: 900; 
+            text-align: center; text-transform: uppercase; 
+            margin-bottom: 10px; letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
         
+        /* User Info Pill - Nhỏ gọn, hiện đại */
         .user-info {
-            background-color: #f0f2f6; color: #002147;
-            padding: 10px 20px; border-radius: 10px;
-            font-weight: bold; text-align: center;
-            border-left: 5px solid #002147;
-            display: block; margin-bottom: 15px;
+            background-color: #f8f9fa; color: #002147;
+            padding: 5px 15px; border-radius: 50px;
+            font-size: 14px; font-weight: 600; text-align: center;
+            border: 1px solid #dee2e6;
+            display: inline-block;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        .stTabs [data-baseweb="tab-list"] { gap: 8px; background-color: transparent; }
+        /* TAB MENU - Nhỏ lại & Chuyên nghiệp */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 5px; 
+            background-color: transparent;
+            margin-bottom: 10px;
+        }
         .stTabs [data-baseweb="tab"] {
-            background-color: #ffffff; border-radius: 5px 5px 0 0;
-            color: #002147; font-weight: 600;
-            border: 1px solid #e0e0e0; border-bottom: none;
-            padding: 10px 20px;
+            height: 40px; /* Giảm chiều cao */
+            padding: 0 15px; /* Giảm padding */
+            background-color: #ffffff; 
+            border-radius: 5px;
+            color: #555; 
+            font-size: 13px; /* Font nhỏ lại */
+            font-weight: 600;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s ease;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            background-color: #f1f1f1;
+            color: #002147;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #002147 !important; color: #FFD700 !important;
+            background-color: #002147 !important;
+            color: #FFD700 !important;
+            border-color: #002147 !important;
+            box-shadow: 0 2px 5px rgba(0,33,71,0.3);
         }
 
+        /* TIMER BOX - Digital Style */
         .timer-box {
-            font-size:45px; font-weight:900; color:#d32f2f;
-            text-align:center; background:#fff5f5; border:2px solid #d32f2f;
-            border-radius:15px; width:120px; margin:0 auto 20px auto;
+            font-family: 'Courier New', monospace;
+            font-size: 32px; font-weight: bold; color: #d32f2f;
+            text-align: center; background: #fff5f5; 
+            border: 1px solid #ffcdd2;
+            border-radius: 8px; width: 100px; margin: 0 auto 15px auto;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
         }
         
+        /* Question Box */
         .question-box {
-            background:#fff; padding:20px; border:2px solid #002147;
-            border-radius:10px; font-weight:bold; color:#002147; 
-            margin-bottom:20px; font-size: 18px;
+            background: #ffffff; padding: 15px 20px; 
+            border-left: 4px solid #002147;
+            border-radius: 0 8px 8px 0;
+            font-weight: 600; color: #333; 
+            margin-bottom: 15px; font-size: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
+        /* Explanation Box */
         .explain-box {
-            background:#e8f5e9; padding:15px; border-radius:8px;
-            border-left:5px solid #4caf50; color:#1b5e20; margin-top:15px;
+            background: #f1f8e9; padding: 12px; 
+            border-radius: 6px; border: 1px solid #c5e1a5;
+            color: #33691e; margin-top: 10px; font-size: 14px;
         }
         
+        /* BUTTONS - Modern Style */
         .stButton button {
-            background-color:#002147 !important; color:#FFD700 !important;
-            font-weight:bold !important; width:100%; border-radius:8px !important;
-            height: 50px; font-size: 16px !important;
+            background: linear-gradient(135deg, #002147 0%, #003366 100%) !important;
+            color: #FFD700 !important;
+            font-weight: 700 !important;
+            font-size: 14px !important; /* Font nhỏ lại */
+            padding: 8px 16px !important; /* Gọn hơn */
+            border-radius: 6px !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+            transition: all 0.3s ease !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
+        /* Hiệu ứng khi di chuột vào nút */
+        .stButton button:hover {
+            transform: translateY(-2px); /* Nổi lên */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+            color: #fff !important;
+        }
+        
+        /* Nút thoát nhỏ hơn */
+        div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+             background: white !important;
+             color: #d32f2f !important;
+             border: 1px solid #d32f2f !important;
+        }
+
         #MainMenu {visibility: hidden;} footer {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
@@ -153,12 +213,13 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER
-        c1, c2 = st.columns([4, 1])
-        with c1:
-            st.markdown(f"<div class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</div>", unsafe_allow_html=True)
-        with c2:
-            if st.button("THOÁT"):
+        # HEADER GỌN GÀNG
+        c1, c2, c3 = st.columns([1, 4, 1])
+        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
+        with c2: 
+            st.markdown(f"<div style='text-align:center; padding-top: 5px;'><span class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</span></div>", unsafe_allow_html=True)
+        with c3:
+            if st.button("THOÁT", key="logout"):
                 st.session_state.clear()
                 st.rerun()
         
@@ -166,19 +227,18 @@ def main():
 
         role = st.session_state.vai_tro
         
-        # --- TAB MENU (ĐÃ CẬP NHẬT CHO HỌC VIÊN) ---
+        # --- TAB MENU ---
         if role == 'Admin':
-            tabs = st.tabs(["👥 QUẢN LÝ USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
+            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"]) # Rút gọn tên tab
             active_tab = "Admin"
         elif role == 'GiangVien':
-            tabs = st.tabs(["👥 CẤP QUYỀN THI", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
+            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
             active_tab = "GV"
-        else: # Role HocVien
-            # Thêm Tab Giáo Trình cho Học viên
-            tabs = st.tabs(["📝 LÀM BÀI THI", "📚 GIÁO TRÌNH"])
+        else:
+            tabs = st.tabs(["📝 THI CỬ", "📚 GIÁO TRÌNH"])
             active_tab = "HV"
 
-        # --- LOGIC THI (MÀN HÌNH ĐANG LÀM BÀI) ---
+        # --- LOGIC THI ---
         if st.session_state.bat_dau:
             st.info("⚠️ ĐANG LÀM BÀI THI")
             qs = st.session_state.ds_cau_hoi
@@ -234,11 +294,10 @@ def main():
                     st.rerun()
 
         else:
-            # --- NỘI DUNG TAB KHI KHÔNG THI ---
+            # --- NỘI DUNG TAB ---
             
             # 1. QUẢN LÝ (Admin + GV)
             if active_tab in ["Admin", "GV"]:
-                # TAB 1: QUẢN LÝ USER
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
                     vals = db.worksheet("HocVien").get_all_values()
@@ -251,7 +310,7 @@ def main():
                         role_ops = ["hocvien", "GiangVien", "Admin"]
                     else:
                         view_df = full_df[full_df['Role'] == 'hocvien']
-                        role_ops = ["hocvien"] # GV chỉ được chọn hocvien
+                        role_ops = ["hocvien"] 
 
                     edited = st.data_editor(
                         view_df,
@@ -276,7 +335,7 @@ def main():
                             st.success("✅ Đã cập nhật thành công!")
                             time.sleep(1); st.rerun()
 
-                # TAB 2: CÂU HỎI
+                # 2. CÂU HỎI
                 with tabs[1]:
                     st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
                     q_vals = get_exams(db)
@@ -288,7 +347,7 @@ def main():
                         if save_to_sheet(db, "CauHoi", q_edit):
                             st.success("Đã lưu!"); time.sleep(1); st.rerun()
 
-                # TAB 3: GIÁO TRÌNH
+                # 3. GIÁO TRÌNH
                 with tabs[2]:
                     st.subheader("📚 TÀI LIỆU")
                     try:
@@ -299,9 +358,8 @@ def main():
                                 if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
                     except: st.warning("Chưa có giáo trình.")
 
-            # 2. HỌC VIÊN
+            # 4. HỌC VIÊN
             elif active_tab == "HV":
-                # TAB 1: THI CỬ
                 with tabs[0]:
                     c1, c2 = st.columns(2)
                     with c1:
@@ -314,7 +372,6 @@ def main():
                             st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
-                        # LOGIC KIỂM TRA QUYỀN CHẶT CHẼ
                         if st.button("🚨 SÁT HẠCH CHÍNH THỨC"):
                             allow_start = False
                             error_msg = ""
@@ -327,7 +384,7 @@ def main():
                                     ws.update_cell(cell.row, 5, "DangThi")
                                     allow_start = True
                                 else:
-                                    error_msg = f"⛔ Bạn chưa được cấp quyền! Trạng thái hiện tại: {stt}"
+                                    error_msg = f"⛔ Chưa được cấp quyền! ({stt})"
                             except Exception as e:
                                 error_msg = f"Lỗi hệ thống: {str(e)}"
 
@@ -342,7 +399,6 @@ def main():
                             else:
                                 st.error(error_msg)
                 
-                # TAB 2: GIÁO TRÌNH (CHO HỌC VIÊN)
                 with tabs[1]:
                     st.subheader("📚 TÀI LIỆU ÔN TẬP")
                     try:
