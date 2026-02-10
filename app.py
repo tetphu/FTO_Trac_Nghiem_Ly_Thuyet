@@ -21,25 +21,22 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN (ĐÃ FIX LỖI CHE MẤT NỘI DUNG) ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
-        /* 1. Đẩy nội dung xuống thấp để không bị che phía trên */
         .block-container {
-            padding-top: 5rem !important; /* Tăng từ 2rem lên 5rem */
+            padding-top: 5rem !important;
             padding-bottom: 3rem !important;
             max-width: 900px;
         }
         
-        /* 2. Header Title - Gọn hơn */
         .gcpd-title {
             color: #002147; font-size: 22px; font-weight: 900; 
             text-align: center; text-transform: uppercase; 
             margin-bottom: 5px; letter-spacing: 1px;
         }
         
-        /* 3. User Info Pill - Nhỏ xinh */
         .user-info {
             background-color: #f1f3f4; color: #002147;
             padding: 4px 12px; border-radius: 20px;
@@ -48,22 +45,15 @@ def inject_css():
             display: inline-block;
         }
         
-        /* 4. TAB MENU - THU NHỎ & TINH TẾ (Compact Style) */
         .stTabs { margin-top: 10px; }
         .stTabs [data-baseweb="tab-list"] {
-            gap: 4px; /* Khoảng cách giữa các tab nhỏ lại */
-            background-color: transparent;
+            gap: 4px; background-color: transparent;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 35px; /* Chiều cao tab thấp hơn */
-            padding: 0 12px; /* Padding ít hơn */
-            background-color: #fff; 
-            border-radius: 6px 6px 0 0;
-            color: #555; 
-            font-size: 12px; /* Chữ nhỏ lại */
-            font-weight: 700;
-            border: 1px solid #eee;
-            border-bottom: none;
+            height: 35px; padding: 0 12px;
+            background-color: #fff; border-radius: 6px 6px 0 0;
+            color: #555; font-size: 12px; font-weight: 700;
+            border: 1px solid #eee; border-bottom: none;
         }
         .stTabs [aria-selected="true"] {
             background-color: #002147 !important;
@@ -71,7 +61,6 @@ def inject_css():
             border-top: 2px solid #FFD700 !important;
         }
 
-        /* 5. Question Box */
         .question-box {
             background: #fff; padding: 15px; 
             border-left: 3px solid #002147;
@@ -81,7 +70,6 @@ def inject_css():
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        /* 6. Timer Box */
         .timer-box {
             font-family: monospace;
             font-size: 28px; font-weight: bold; color: #d32f2f;
@@ -90,7 +78,6 @@ def inject_css():
             border-radius: 8px; width: 80px; margin: 0 auto 10px auto;
         }
         
-        /* 7. Buttons - Nút bấm nhỏ gọn chuyên nghiệp */
         .stButton button {
             background: #002147 !important;
             color: #FFD700 !important;
@@ -107,15 +94,14 @@ def inject_css():
             box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
         }
         
-        /* Nút thoát riêng biệt (màu đỏ) */
-        div[data-testid="column"] button[key="logout"] {
+        /* Nút thoát & Nút dừng thi (màu đỏ) */
+        div[data-testid="column"] button[key="logout"], button[key="stop_exam"] {
              background: white !important;
              color: #d32f2f !important;
              border: 1px solid #d32f2f !important;
              box-shadow: none !important;
         }
-        
-        /* Ẩn các phần thừa */
+
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
@@ -195,24 +181,22 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER (LOGO + INFO + LOGOUT)
-        # Chia 3 cột tỷ lệ 1:4:1 để cân đối
+        # HEADER
         c1, c2, c3 = st.columns([1, 4, 1], gap="small")
         with c1: 
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=45)
         with c2: 
-            # Dùng st.empty để căn giữa user info
             st.markdown(f"<div style='text-align:center; padding-top:5px;'><span class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</span></div>", unsafe_allow_html=True)
         with c3:
             if st.button("THOÁT", key="logout"):
                 st.session_state.clear()
                 st.rerun()
         
-        st.write("") # Spacer nhỏ
+        st.write("")
 
         role = st.session_state.vai_tro
         
-        # --- TAB MENU NHỎ GỌN ---
+        # --- TAB MENU ---
         if role == 'Admin':
             tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
             active_tab = "Admin"
@@ -225,7 +209,18 @@ def main():
 
         # --- LOGIC THI CỬ ---
         if st.session_state.bat_dau:
-            st.info("⚠️ ĐANG LÀM BÀI THI")
+            # 1. HIỂN THỊ TRẠNG THÁI THI
+            if st.session_state.mode == 'thu':
+                st.info("📝 ĐANG LÀM BÀI THI THỬ")
+                # Nút dừng thi thử
+                if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
+                    st.session_state.bat_dau = False
+                    st.session_state.ds_cau_hoi = []
+                    st.rerun()
+            else:
+                st.error("🚨 ĐANG LÀM BÀI THI CHÍNH THỨC (SÁT HẠCH LÊN CHỨC)")
+
+            # 2. XỬ LÝ CÂU HỎI
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
             
