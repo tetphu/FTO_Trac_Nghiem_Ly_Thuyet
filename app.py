@@ -134,13 +134,12 @@ def render_mixed_content(content):
         if line.startswith(('http://', 'https://')):
             try: st.image(line, use_column_width=True)
             except: st.error(f"⚠️ Lỗi ảnh: {line}")
-        elif line: st.markdown(line)
+        elif line: st.markdown(line, unsafe_allow_html=True)
 
 # --- 6. MAIN ---
 def main():
     inject_css()
     
-    # Init Session
     if 'vai_tro' not in st.session_state: st.session_state.vai_tro = None
     if 'bat_dau' not in st.session_state: st.session_state.bat_dau = False
     if 'diem_so' not in st.session_state: st.session_state.diem_so = 0
@@ -204,7 +203,6 @@ def main():
             # HIỂN THỊ TRẠNG THÁI
             if st.session_state.mode == 'thu':
                 st.info("📝 THI THỬ")
-                # NÚT DỪNG THI (RESET TOÀN BỘ)
                 if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -231,7 +229,7 @@ def main():
                             ws.update_cell(cell.row, 5, "DaThi")
                             ws.update_cell(cell.row, 6, str(st.session_state.diem_so))
                         except: pass
-                    # Reset khi kết thúc
+                    # Reset toàn bộ
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
                     st.session_state.chi_so = 0
@@ -242,24 +240,37 @@ def main():
                 st.stop()
 
             q = qs[idx]
-            while len(q)<7: q.append("")
+            # --- FIX AN TOÀN DỮ LIỆU ---
+            # 1. Đảm bảo q có đủ cột, nếu thiếu thì bù chuỗi rỗng
+            while len(q) < 7: q.append("")
             
+            # 2. Kiểm tra nếu câu hỏi rỗng thì báo lỗi (tránh crash)
+            if not q[0] or str(q[0]).strip() == "":
+                st.warning(f"⚠️ Câu hỏi số {idx+1} bị lỗi dữ liệu (trống). Đang chuyển câu tiếp...")
+                st.session_state.chi_so += 1
+                st.rerun()
+
+            # --- GIAO DIỆN CÂU HỎI ---
             if not st.session_state.da_nop:
                 if not st.session_state.time_end: st.session_state.time_end = time.time() + THOI_GIAN_THI
                 left = int(st.session_state.time_end - time.time())
                 if left <= 0: st.session_state.da_nop = True; st.session_state.choice = None; st.rerun()
 
                 st.markdown(f"<div class='timer-box'>⏳ {left}</div>", unsafe_allow_html=True)
-                st.markdown(f"**Câu {idx+1}:**")
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
-                ans = st.radio("Chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key="run")
+                
+                # --- FIX QUAN TRỌNG: KEY ĐỘNG (Dynamic Key) ---
+                # Key thay đổi theo chỉ số câu hỏi (radio_q0, radio_q1...) -> Không bao giờ bị trùng
+                ans = st.radio("Chọn đáp án:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key=f"radio_q{idx}")
+                
                 st.write("")
                 if st.button("CHỐT ĐÁP ÁN"):
                     st.session_state.choice = ans.split('.')[0] if ans else None
                     st.session_state.da_nop = True; st.rerun()
                 time.sleep(1); st.rerun()
             else:
-                st.markdown(f"**Câu {idx+1}:**")
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 res = st.session_state.choice
                 true = str(q[5]).strip().upper()
@@ -333,8 +344,7 @@ def main():
                     with c1:
                         if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]; 
-                            if len(qs)>0: qs = random.sample(qs, min(20, len(qs)))
-                            # RESET trước khi thi mới
+                            if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
                             st.session_state.bat_dau = True
                             st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0
@@ -357,7 +367,6 @@ def main():
 
                             if allow:
                                 qs = get_exams(db)[1:]
-                                # RESET trước khi thi thật
                                 st.session_state.bat_dau = True
                                 st.session_state.ds_cau_hoi = qs
                                 st.session_state.chi_so = 0
@@ -371,4 +380,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
