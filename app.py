@@ -1,8 +1,13 @@
 import streamlit as st
 import time
 
-# --- 1. CẤU HÌNH ---
-st.set_page_config(page_title="FTO System", page_icon="🚓", layout="centered")
+# --- 1. CẤU HÌNH TRANG (ĐỂ MẶC ĐỊNH PADDING ĐỂ KHÔNG BỊ CHE) ---
+st.set_page_config(
+    page_title="FTO System",
+    page_icon="🚓",
+    layout="centered",
+    initial_sidebar_state="collapsed" # Ẩn luôn sidebar cho gọn
+)
 
 # --- 2. KIỂM TRA THƯ VIỆN ---
 try:
@@ -16,59 +21,79 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN ---
+# --- 3. CSS GIAO DIỆN (ĐÃ FIX LỖI HIỂN THỊ PC) ---
 def inject_css():
     st.markdown("""
         <style>
-        .block-container {padding-top: 1rem; padding-bottom: 5rem;}
+        /* 1. Fix lỗi menu bị che trên PC: Tăng khoảng cách trên */
+        .block-container {
+            padding-top: 3rem !important; 
+            padding-bottom: 5rem !important;
+        }
         
-        /* Header */
+        /* 2. Header đẹp hơn */
         .gcpd-title {
-            color:#002147; font-size:24px; font-weight:900; 
-            text-align:center; text-transform:uppercase; margin-bottom:10px;
+            color:#002147; font-size:28px; font-weight:900; 
+            text-align:center; text-transform:uppercase; margin-bottom:20px;
+            letter-spacing: 1px;
         }
         
-        /* User Info */
+        /* 3. Thông tin User nổi bật */
         .user-info {
-            background:#e3f2fd; padding:8px 15px; border-radius:20px;
-            text-align:center; font-weight:bold; color:#0d47a1;
-            border: 1px solid #90caf9; display: inline-block;
+            background-color: #f0f2f6; color: #002147;
+            padding: 10px 20px; border-radius: 10px;
+            font-weight: bold; text-align: center;
+            border-left: 5px solid #002147;
+            display: block; margin-bottom: 15px;
         }
         
-        /* Timer */
+        /* 4. Tab Menu Tự động co giãn (Không cố định chiều cao) */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: transparent;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background-color: #ffffff;
+            border-radius: 5px 5px 0 0;
+            color: #002147;
+            font-weight: 600;
+            border: 1px solid #e0e0e0;
+            border-bottom: none;
+            padding: 10px 20px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #002147 !important;
+            color: #FFD700 !important;
+        }
+
+        /* 5. Các thành phần khác */
         .timer-box {
-            font-size:40px; font-weight:900; color:#d32f2f;
-            text-align:center; background:#ffebee; border:2px solid #d32f2f;
-            border-radius:12px; width:100px; margin:0 auto 15px auto;
+            font-size:45px; font-weight:900; color:#d32f2f;
+            text-align:center; background:#fff5f5; border:2px solid #d32f2f;
+            border-radius:15px; width:120px; margin:0 auto 20px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
-        /* Question Box */
         .question-box {
-            background:#fff; padding:15px; border:2px solid #002147;
-            border-radius:10px; font-weight:bold; color:#002147; margin-bottom:15px;
+            background:#fff; padding:20px; border:2px solid #002147;
+            border-radius:10px; font-weight:bold; color:#002147; 
+            margin-bottom:20px; font-size: 18px;
         }
         
-        /* Explanation */
         .explain-box {
-            background:#e8f5e9; padding:15px; border-left:5px solid #4caf50;
-            color:#1b5e20; margin-top:10px;
+            background:#e8f5e9; padding:15px; border-radius:8px;
+            border-left:5px solid #4caf50; color:#1b5e20; margin-top:15px;
         }
         
-        /* Button */
         .stButton button {
             background-color:#002147 !important; color:#FFD700 !important;
             font-weight:bold !important; width:100%; border-radius:8px !important;
+            height: 50px; font-size: 16px !important;
         }
         
-        /* Tab Menu Styling */
-        .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px; white-space: pre-wrap; background-color: #f0f2f6;
-            border-radius: 5px; color: #002147; font-weight: bold;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #002147; color: #FFD700;
-        }
+        /* Ẩn bớt các phần thừa của Streamlit */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -147,13 +172,12 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # Header
-        c1, c2, c3 = st.columns([1, 4, 1])
-        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
-        with c2: 
-            st.markdown(f"<div style='text-align:center'><span class='user-info'>👮 {st.session_state.ho_ten} ({st.session_state.vai_tro})</span></div>", unsafe_allow_html=True)
-        with c3:
-            if st.button("THOÁT", key="logout"):
+        # HEADER
+        c1, c2 = st.columns([4, 1])
+        with c1:
+            st.markdown(f"<div class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</div>", unsafe_allow_html=True)
+        with c2:
+            if st.button("THOÁT"):
                 st.session_state.clear()
                 st.rerun()
         
@@ -161,7 +185,7 @@ def main():
 
         role = st.session_state.vai_tro
         
-        # CẤU HÌNH TAB (MENU TRÊN CÙNG)
+        # --- TAB MENU ---
         if role == 'Admin':
             tabs = st.tabs(["👥 QUẢN LÝ USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
             active_tab = "Admin"
@@ -172,7 +196,7 @@ def main():
             tabs = st.tabs(["📝 LÀM BÀI THI"])
             active_tab = "HV"
 
-        # --- LOGIC THI CỬ (ƯU TIÊN HIỂN THỊ KHI ĐANG THI) ---
+        # --- LOGIC THI ---
         if st.session_state.bat_dau:
             st.info("⚠️ ĐANG LÀM BÀI THI")
             qs = st.session_state.ds_cau_hoi
@@ -228,9 +252,9 @@ def main():
                     st.rerun()
 
         else:
-            # --- NỘI DUNG TAB KHI KHÔNG THI ---
+            # --- NỘI DUNG TAB ---
             
-            # 1. TAB QUẢN LÝ (Admin + GV)
+            # 1. QUẢN LÝ (Admin + GV)
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
@@ -262,7 +286,6 @@ def main():
                         if role == 'Admin':
                             final_df = edited
                         else:
-                            # GV: Gộp lại với phần bị ẩn
                             df_hidden = full_df[full_df['Role'] != 'hocvien']
                             final_df = pd.concat([df_hidden, edited], ignore_index=True)
                         
@@ -270,7 +293,7 @@ def main():
                             st.success("✅ Đã cập nhật thành công!")
                             time.sleep(1); st.rerun()
 
-                # 2. TAB CÂU HỎI
+                # 2. CÂU HỎI
                 with tabs[1]:
                     st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
                     q_vals = get_exams(db)
@@ -282,7 +305,7 @@ def main():
                         if save_to_sheet(db, "CauHoi", q_edit):
                             st.success("Đã lưu!"); time.sleep(1); st.rerun()
 
-                # 3. TAB GIÁO TRÌNH
+                # 3. GIÁO TRÌNH
                 with tabs[2]:
                     st.subheader("📚 TÀI LIỆU")
                     try:
@@ -293,7 +316,7 @@ def main():
                                 if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
                     except: st.warning("Chưa có giáo trình.")
 
-            # 4. TAB HỌC VIÊN
+            # 4. HỌC VIÊN
             elif active_tab == "HV":
                 with tabs[0]:
                     c1, c2 = st.columns(2)
