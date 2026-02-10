@@ -1,12 +1,12 @@
 import streamlit as st
 import time
 
-# --- 1. CẤU HÌNH TRANG (ĐỂ MẶC ĐỊNH PADDING ĐỂ KHÔNG BỊ CHE) ---
+# --- 1. CẤU HÌNH TRANG ---
 st.set_page_config(
     page_title="FTO System",
     page_icon="🚓",
     layout="centered",
-    initial_sidebar_state="collapsed" # Ẩn luôn sidebar cho gọn
+    initial_sidebar_state="collapsed"
 )
 
 # --- 2. KIỂM TRA THƯ VIỆN ---
@@ -21,24 +21,17 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN (ĐÃ FIX LỖI HIỂN THỊ PC) ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
-        /* 1. Fix lỗi menu bị che trên PC: Tăng khoảng cách trên */
-        .block-container {
-            padding-top: 3rem !important; 
-            padding-bottom: 5rem !important;
-        }
+        .block-container {padding-top: 3rem !important; padding-bottom: 5rem !important;}
         
-        /* 2. Header đẹp hơn */
         .gcpd-title {
             color:#002147; font-size:28px; font-weight:900; 
             text-align:center; text-transform:uppercase; margin-bottom:20px;
-            letter-spacing: 1px;
         }
         
-        /* 3. Thông tin User nổi bật */
         .user-info {
             background-color: #f0f2f6; color: #002147;
             padding: 10px 20px; border-radius: 10px;
@@ -47,31 +40,21 @@ def inject_css():
             display: block; margin-bottom: 15px;
         }
         
-        /* 4. Tab Menu Tự động co giãn (Không cố định chiều cao) */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: transparent;
-        }
+        .stTabs [data-baseweb="tab-list"] { gap: 8px; background-color: transparent; }
         .stTabs [data-baseweb="tab"] {
-            background-color: #ffffff;
-            border-radius: 5px 5px 0 0;
-            color: #002147;
-            font-weight: 600;
-            border: 1px solid #e0e0e0;
-            border-bottom: none;
+            background-color: #ffffff; border-radius: 5px 5px 0 0;
+            color: #002147; font-weight: 600;
+            border: 1px solid #e0e0e0; border-bottom: none;
             padding: 10px 20px;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #002147 !important;
-            color: #FFD700 !important;
+            background-color: #002147 !important; color: #FFD700 !important;
         }
 
-        /* 5. Các thành phần khác */
         .timer-box {
             font-size:45px; font-weight:900; color:#d32f2f;
             text-align:center; background:#fff5f5; border:2px solid #d32f2f;
             border-radius:15px; width:120px; margin:0 auto 20px auto;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
         .question-box {
@@ -91,9 +74,7 @@ def inject_css():
             height: 50px; font-size: 16px !important;
         }
         
-        /* Ẩn bớt các phần thừa của Streamlit */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -196,7 +177,7 @@ def main():
             tabs = st.tabs(["📝 LÀM BÀI THI"])
             active_tab = "HV"
 
-        # --- LOGIC THI ---
+        # --- LOGIC THI (MÀN HÌNH ĐANG LÀM BÀI) ---
         if st.session_state.bat_dau:
             st.info("⚠️ ĐANG LÀM BÀI THI")
             qs = st.session_state.ds_cau_hoi
@@ -252,7 +233,7 @@ def main():
                     st.rerun()
 
         else:
-            # --- NỘI DUNG TAB ---
+            # --- NỘI DUNG TAB KHI KHÔNG THI ---
             
             # 1. QUẢN LÝ (Admin + GV)
             if active_tab in ["Admin", "GV"]:
@@ -330,21 +311,33 @@ def main():
                             st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
+                        # --- LOGIC NÚT BẮT ĐẦU CHÍNH THỨC (ĐÃ SỬA LỖI 2 LẦN CLICK) ---
                         if st.button("🚨 SÁT HẠCH CHÍNH THỨC"):
+                            allow_start = False
+                            error_msg = ""
                             try:
                                 ws = db.worksheet("HocVien")
                                 cell = ws.find(st.session_state.user)
                                 stt = ws.cell(cell.row, 5).value
-                                if stt != "DuocThi": st.error(f"Chưa được cấp quyền! ({stt})"); st.stop()
-                                ws.update_cell(cell.row, 5, "DangThi")
                                 
+                                if stt == "DuocThi":
+                                    ws.update_cell(cell.row, 5, "DangThi")
+                                    allow_start = True
+                                else:
+                                    error_msg = f"⛔ Bạn chưa được cấp quyền! Trạng thái hiện tại: {stt}"
+                            except Exception as e:
+                                error_msg = f"Lỗi hệ thống: {str(e)}"
+
+                            if allow_start:
                                 qs = get_exams(db)[1:]
                                 st.session_state.bat_dau = True
                                 st.session_state.ds_cau_hoi = qs
-                                st.session_state.chi_so = 0; st.session_state.diem_so = 0
+                                st.session_state.chi_so = 0
+                                st.session_state.diem_so = 0
                                 st.session_state.mode = 'that'
                                 st.rerun()
-                            except: st.error("Lỗi User")
+                            else:
+                                st.error(error_msg)
 
 if __name__ == "__main__":
     main()
