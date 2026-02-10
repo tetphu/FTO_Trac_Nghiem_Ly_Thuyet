@@ -20,7 +20,6 @@ THOI_GIAN_THI = 30
 def inject_css():
     st.markdown("""
         <style>
-        /* Tinh chỉnh khoảng cách để Menu không bị che */
         .block-container {padding-top: 1rem; padding-bottom: 5rem;}
         
         /* Header */
@@ -29,39 +28,39 @@ def inject_css():
             text-align:center; text-transform:uppercase; margin-bottom:10px;
         }
         
-        /* Thông tin User */
+        /* User Info */
         .user-info {
             background:#e3f2fd; padding:8px 15px; border-radius:20px;
             text-align:center; font-weight:bold; color:#0d47a1;
             border: 1px solid #90caf9; display: inline-block;
         }
         
-        /* Đồng hồ */
+        /* Timer */
         .timer-box {
             font-size:40px; font-weight:900; color:#d32f2f;
             text-align:center; background:#ffebee; border:2px solid #d32f2f;
             border-radius:12px; width:100px; margin:0 auto 15px auto;
         }
         
-        /* Câu hỏi */
+        /* Question Box */
         .question-box {
             background:#fff; padding:15px; border:2px solid #002147;
             border-radius:10px; font-weight:bold; color:#002147; margin-bottom:15px;
         }
         
-        /* Giải thích */
+        /* Explanation */
         .explain-box {
             background:#e8f5e9; padding:15px; border-left:5px solid #4caf50;
             color:#1b5e20; margin-top:10px;
         }
         
-        /* Nút bấm */
+        /* Button */
         .stButton button {
             background-color:#002147 !important; color:#FFD700 !important;
             font-weight:bold !important; width:100%; border-radius:8px !important;
         }
         
-        /* Tab Menu đẹp hơn */
+        /* Tab Menu Styling */
         .stTabs [data-baseweb="tab-list"] { gap: 10px; }
         .stTabs [data-baseweb="tab"] {
             height: 50px; white-space: pre-wrap; background-color: #f0f2f6;
@@ -116,7 +115,6 @@ def get_exams(db):
 def main():
     inject_css()
     
-    # Init Session
     if 'vai_tro' not in st.session_state: st.session_state.vai_tro = None
     if 'bat_dau' not in st.session_state: st.session_state.bat_dau = False
     if 'diem_so' not in st.session_state: st.session_state.diem_so = 0
@@ -149,7 +147,7 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER GỌN GÀNG
+        # Header
         c1, c2, c3 = st.columns([1, 4, 1])
         with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
         with c2: 
@@ -159,12 +157,11 @@ def main():
                 st.session_state.clear()
                 st.rerun()
         
-        st.write("") # Spacer
+        st.write("")
 
-        # MENU PHÂN QUYỀN DÙNG TAB
         role = st.session_state.vai_tro
         
-        # Định nghĩa các Tab dựa trên Role
+        # CẤU HÌNH TAB (MENU TRÊN CÙNG)
         if role == 'Admin':
             tabs = st.tabs(["👥 QUẢN LÝ USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
             active_tab = "Admin"
@@ -175,10 +172,9 @@ def main():
             tabs = st.tabs(["📝 LÀM BÀI THI"])
             active_tab = "HV"
 
-        # Nếu đang thi thì ẩn nội dung Tab, hiện màn hình thi
+        # --- LOGIC THI CỬ (ƯU TIÊN HIỂN THỊ KHI ĐANG THI) ---
         if st.session_state.bat_dau:
-            st.info("⚠️ ĐANG LÀM BÀI THI - Vui lòng không tải lại trang")
-            # --- LOGIC THI ---
+            st.info("⚠️ ĐANG LÀM BÀI THI")
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
             
@@ -232,7 +228,7 @@ def main():
                     st.rerun()
 
         else:
-            # --- NỘI DUNG CÁC TAB KHI KHÔNG THI ---
+            # --- NỘI DUNG TAB KHI KHÔNG THI ---
             
             # 1. TAB QUẢN LÝ (Admin + GV)
             if active_tab in ["Admin", "GV"]:
@@ -243,15 +239,12 @@ def main():
                     clean_data = [r[:6]+[""]*(6-len(r)) for r in vals[1:]] if len(vals)>1 else []
                     full_df = pd.DataFrame(clean_data, columns=headers)
 
-                    # LOGIC LỌC & QUYỀN SỬA ROLE
                     if role == 'Admin':
-                        # Admin: Thấy hết, Sửa được mọi Role
                         view_df = full_df
-                        role_options = ["hocvien", "GiangVien", "Admin"]
+                        role_ops = ["hocvien", "GiangVien", "Admin"]
                     else:
-                        # GV: Chỉ thấy hocvien, Chỉ được chọn Role 'hocvien'
                         view_df = full_df[full_df['Role'] == 'hocvien']
-                        role_options = ["hocvien"] # <--- CHỈ CHO PHÉP 1 LỰA CHỌN
+                        role_ops = ["hocvien"] # GV chỉ được chọn hocvien
 
                     edited = st.data_editor(
                         view_df,
@@ -260,7 +253,7 @@ def main():
                         hide_index=True,
                         column_config={
                             "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
-                            "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_options, required=True),
+                            "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
                             "Password": st.column_config.TextColumn("Mật Khẩu")
                         }
                     )
