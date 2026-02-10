@@ -166,15 +166,16 @@ def main():
 
         role = st.session_state.vai_tro
         
-        # --- TAB MENU ---
+        # --- TAB MENU (ĐÃ CẬP NHẬT CHO HỌC VIÊN) ---
         if role == 'Admin':
             tabs = st.tabs(["👥 QUẢN LÝ USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
             active_tab = "Admin"
         elif role == 'GiangVien':
             tabs = st.tabs(["👥 CẤP QUYỀN THI", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
             active_tab = "GV"
-        else:
-            tabs = st.tabs(["📝 LÀM BÀI THI"])
+        else: # Role HocVien
+            # Thêm Tab Giáo Trình cho Học viên
+            tabs = st.tabs(["📝 LÀM BÀI THI", "📚 GIÁO TRÌNH"])
             active_tab = "HV"
 
         # --- LOGIC THI (MÀN HÌNH ĐANG LÀM BÀI) ---
@@ -237,6 +238,7 @@ def main():
             
             # 1. QUẢN LÝ (Admin + GV)
             if active_tab in ["Admin", "GV"]:
+                # TAB 1: QUẢN LÝ USER
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
                     vals = db.worksheet("HocVien").get_all_values()
@@ -274,7 +276,7 @@ def main():
                             st.success("✅ Đã cập nhật thành công!")
                             time.sleep(1); st.rerun()
 
-                # 2. CÂU HỎI
+                # TAB 2: CÂU HỎI
                 with tabs[1]:
                     st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
                     q_vals = get_exams(db)
@@ -286,7 +288,7 @@ def main():
                         if save_to_sheet(db, "CauHoi", q_edit):
                             st.success("Đã lưu!"); time.sleep(1); st.rerun()
 
-                # 3. GIÁO TRÌNH
+                # TAB 3: GIÁO TRÌNH
                 with tabs[2]:
                     st.subheader("📚 TÀI LIỆU")
                     try:
@@ -297,8 +299,9 @@ def main():
                                 if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
                     except: st.warning("Chưa có giáo trình.")
 
-            # 4. HỌC VIÊN
+            # 2. HỌC VIÊN
             elif active_tab == "HV":
+                # TAB 1: THI CỬ
                 with tabs[0]:
                     c1, c2 = st.columns(2)
                     with c1:
@@ -311,7 +314,7 @@ def main():
                             st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
-                        # --- LOGIC NÚT BẮT ĐẦU CHÍNH THỨC (ĐÃ SỬA LỖI 2 LẦN CLICK) ---
+                        # LOGIC KIỂM TRA QUYỀN CHẶT CHẼ
                         if st.button("🚨 SÁT HẠCH CHÍNH THỨC"):
                             allow_start = False
                             error_msg = ""
@@ -338,6 +341,17 @@ def main():
                                 st.rerun()
                             else:
                                 st.error(error_msg)
+                
+                # TAB 2: GIÁO TRÌNH (CHO HỌC VIÊN)
+                with tabs[1]:
+                    st.subheader("📚 TÀI LIỆU ÔN TẬP")
+                    try:
+                        g_data = db.worksheet("GiaoTrinh").get_all_records()
+                        for l in g_data:
+                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                                st.write(l.get('NoiDung',''))
+                                if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
+                    except: st.warning("Chưa có giáo trình.")
 
 if __name__ == "__main__":
     main()
