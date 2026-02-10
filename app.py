@@ -21,120 +21,102 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN (ĐÃ NÂNG CẤP PRO) ---
+# --- 3. CSS GIAO DIỆN (ĐÃ FIX LỖI CHE MẤT NỘI DUNG) ---
 def inject_css():
     st.markdown("""
         <style>
-        /* Tinh chỉnh khoảng cách chung */
+        /* 1. Đẩy nội dung xuống thấp để không bị che phía trên */
         .block-container {
-            padding-top: 2rem !important; 
+            padding-top: 5rem !important; /* Tăng từ 2rem lên 5rem */
             padding-bottom: 3rem !important;
-            max-width: 800px; /* Giới hạn chiều rộng trên PC cho đẹp */
+            max-width: 900px;
         }
         
-        /* Header Title */
+        /* 2. Header Title - Gọn hơn */
         .gcpd-title {
-            color: #002147; font-size: 24px; font-weight: 900; 
+            color: #002147; font-size: 22px; font-weight: 900; 
             text-align: center; text-transform: uppercase; 
-            margin-bottom: 10px; letter-spacing: 1px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            margin-bottom: 5px; letter-spacing: 1px;
         }
         
-        /* User Info Pill - Nhỏ gọn, hiện đại */
+        /* 3. User Info Pill - Nhỏ xinh */
         .user-info {
-            background-color: #f8f9fa; color: #002147;
-            padding: 5px 15px; border-radius: 50px;
-            font-size: 14px; font-weight: 600; text-align: center;
-            border: 1px solid #dee2e6;
+            background-color: #f1f3f4; color: #002147;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 13px; font-weight: 700; text-align: center;
+            border: 1px solid #dadce0;
             display: inline-block;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        /* TAB MENU - Nhỏ lại & Chuyên nghiệp */
+        /* 4. TAB MENU - THU NHỎ & TINH TẾ (Compact Style) */
+        .stTabs { margin-top: 10px; }
         .stTabs [data-baseweb="tab-list"] {
-            gap: 5px; 
+            gap: 4px; /* Khoảng cách giữa các tab nhỏ lại */
             background-color: transparent;
-            margin-bottom: 10px;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 40px; /* Giảm chiều cao */
-            padding: 0 15px; /* Giảm padding */
-            background-color: #ffffff; 
-            border-radius: 5px;
+            height: 35px; /* Chiều cao tab thấp hơn */
+            padding: 0 12px; /* Padding ít hơn */
+            background-color: #fff; 
+            border-radius: 6px 6px 0 0;
             color: #555; 
-            font-size: 13px; /* Font nhỏ lại */
-            font-weight: 600;
-            border: 1px solid #e0e0e0;
-            transition: all 0.2s ease;
-        }
-        .stTabs [data-baseweb="tab"]:hover {
-            background-color: #f1f1f1;
-            color: #002147;
+            font-size: 12px; /* Chữ nhỏ lại */
+            font-weight: 700;
+            border: 1px solid #eee;
+            border-bottom: none;
         }
         .stTabs [aria-selected="true"] {
             background-color: #002147 !important;
             color: #FFD700 !important;
-            border-color: #002147 !important;
-            box-shadow: 0 2px 5px rgba(0,33,71,0.3);
+            border-top: 2px solid #FFD700 !important;
         }
 
-        /* TIMER BOX - Digital Style */
-        .timer-box {
-            font-family: 'Courier New', monospace;
-            font-size: 32px; font-weight: bold; color: #d32f2f;
-            text-align: center; background: #fff5f5; 
-            border: 1px solid #ffcdd2;
-            border-radius: 8px; width: 100px; margin: 0 auto 15px auto;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
-        }
-        
-        /* Question Box */
+        /* 5. Question Box */
         .question-box {
-            background: #ffffff; padding: 15px 20px; 
-            border-left: 4px solid #002147;
-            border-radius: 0 8px 8px 0;
+            background: #fff; padding: 15px; 
+            border-left: 3px solid #002147;
+            border-radius: 4px;
             font-weight: 600; color: #333; 
-            margin-bottom: 15px; font-size: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 10px; font-size: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        /* Explanation Box */
-        .explain-box {
-            background: #f1f8e9; padding: 12px; 
-            border-radius: 6px; border: 1px solid #c5e1a5;
-            color: #33691e; margin-top: 10px; font-size: 14px;
+        /* 6. Timer Box */
+        .timer-box {
+            font-family: monospace;
+            font-size: 28px; font-weight: bold; color: #d32f2f;
+            text-align: center; background: #fff; 
+            border: 2px solid #ffcdd2;
+            border-radius: 8px; width: 80px; margin: 0 auto 10px auto;
         }
         
-        /* BUTTONS - Modern Style */
+        /* 7. Buttons - Nút bấm nhỏ gọn chuyên nghiệp */
         .stButton button {
-            background: linear-gradient(135deg, #002147 0%, #003366 100%) !important;
+            background: #002147 !important;
             color: #FFD700 !important;
             font-weight: 700 !important;
-            font-size: 14px !important; /* Font nhỏ lại */
-            padding: 8px 16px !important; /* Gọn hơn */
-            border-radius: 6px !important;
+            font-size: 13px !important;
+            padding: 0.4rem 1rem !important;
+            border-radius: 4px !important;
             border: none !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-            transition: all 0.3s ease !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+            transition: all 0.2s;
         }
-        
-        /* Hiệu ứng khi di chuột vào nút */
         .stButton button:hover {
-            transform: translateY(-2px); /* Nổi lên */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
-            color: #fff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
         }
         
-        /* Nút thoát nhỏ hơn */
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        /* Nút thoát riêng biệt (màu đỏ) */
+        div[data-testid="column"] button[key="logout"] {
              background: white !important;
              color: #d32f2f !important;
              border: 1px solid #d32f2f !important;
+             box-shadow: none !important;
         }
-
-        #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+        
+        /* Ẩn các phần thừa */
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -213,32 +195,35 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER GỌN GÀNG
-        c1, c2, c3 = st.columns([1, 4, 1])
-        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=50)
+        # HEADER (LOGO + INFO + LOGOUT)
+        # Chia 3 cột tỷ lệ 1:4:1 để cân đối
+        c1, c2, c3 = st.columns([1, 4, 1], gap="small")
+        with c1: 
+            st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=45)
         with c2: 
-            st.markdown(f"<div style='text-align:center; padding-top: 5px;'><span class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</span></div>", unsafe_allow_html=True)
+            # Dùng st.empty để căn giữa user info
+            st.markdown(f"<div style='text-align:center; padding-top:5px;'><span class='user-info'>👮 {st.session_state.ho_ten} | {st.session_state.vai_tro}</span></div>", unsafe_allow_html=True)
         with c3:
             if st.button("THOÁT", key="logout"):
                 st.session_state.clear()
                 st.rerun()
         
-        st.write("")
+        st.write("") # Spacer nhỏ
 
         role = st.session_state.vai_tro
         
-        # --- TAB MENU ---
+        # --- TAB MENU NHỎ GỌN ---
         if role == 'Admin':
-            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"]) # Rút gọn tên tab
+            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
             active_tab = "Admin"
         elif role == 'GiangVien':
-            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 GIÁO TRÌNH"])
+            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
             active_tab = "GV"
         else:
-            tabs = st.tabs(["📝 THI CỬ", "📚 GIÁO TRÌNH"])
+            tabs = st.tabs(["📝 THI CỬ", "📚 TÀI LIỆU"])
             active_tab = "HV"
 
-        # --- LOGIC THI ---
+        # --- LOGIC THI CỬ ---
         if st.session_state.bat_dau:
             st.info("⚠️ ĐANG LÀM BÀI THI")
             qs = st.session_state.ds_cau_hoi
@@ -296,7 +281,7 @@ def main():
         else:
             # --- NỘI DUNG TAB ---
             
-            # 1. QUẢN LÝ (Admin + GV)
+            # 1. QUẢN LÝ
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
@@ -310,7 +295,7 @@ def main():
                         role_ops = ["hocvien", "GiangVien", "Admin"]
                     else:
                         view_df = full_df[full_df['Role'] == 'hocvien']
-                        role_ops = ["hocvien"] 
+                        role_ops = ["hocvien"]
 
                     edited = st.data_editor(
                         view_df,
@@ -332,10 +317,9 @@ def main():
                             final_df = pd.concat([df_hidden, edited], ignore_index=True)
                         
                         if save_to_sheet(db, "HocVien", final_df):
-                            st.success("✅ Đã cập nhật thành công!")
+                            st.success("✅ Đã cập nhật!")
                             time.sleep(1); st.rerun()
 
-                # 2. CÂU HỎI
                 with tabs[1]:
                     st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
                     q_vals = get_exams(db)
@@ -347,7 +331,6 @@ def main():
                         if save_to_sheet(db, "CauHoi", q_edit):
                             st.success("Đã lưu!"); time.sleep(1); st.rerun()
 
-                # 3. GIÁO TRÌNH
                 with tabs[2]:
                     st.subheader("📚 TÀI LIỆU")
                     try:
@@ -358,12 +341,12 @@ def main():
                                 if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
                     except: st.warning("Chưa có giáo trình.")
 
-            # 4. HỌC VIÊN
+            # 2. HỌC VIÊN
             elif active_tab == "HV":
                 with tabs[0]:
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("📝 THI THỬ (LUYỆN TẬP)"):
+                        if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]
                             if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
                             st.session_state.bat_dau = True
@@ -372,21 +355,18 @@ def main():
                             st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
-                        if st.button("🚨 SÁT HẠCH CHÍNH THỨC"):
+                        if st.button("🚨 SÁT HẠCH"):
                             allow_start = False
                             error_msg = ""
                             try:
                                 ws = db.worksheet("HocVien")
                                 cell = ws.find(st.session_state.user)
                                 stt = ws.cell(cell.row, 5).value
-                                
                                 if stt == "DuocThi":
                                     ws.update_cell(cell.row, 5, "DangThi")
                                     allow_start = True
-                                else:
-                                    error_msg = f"⛔ Chưa được cấp quyền! ({stt})"
-                            except Exception as e:
-                                error_msg = f"Lỗi hệ thống: {str(e)}"
+                                else: error_msg = f"⛔ Chưa được cấp quyền! ({stt})"
+                            except Exception as e: error_msg = f"Lỗi: {str(e)}"
 
                             if allow_start:
                                 qs = get_exams(db)[1:]
@@ -396,8 +376,7 @@ def main():
                                 st.session_state.diem_so = 0
                                 st.session_state.mode = 'that'
                                 st.rerun()
-                            else:
-                                st.error(error_msg)
+                            else: st.error(error_msg)
                 
                 with tabs[1]:
                     st.subheader("📚 TÀI LIỆU ÔN TẬP")
