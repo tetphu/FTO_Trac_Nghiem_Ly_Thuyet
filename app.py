@@ -26,9 +26,15 @@ def inject_css():
         .gcpd-title {
             font-family: sans-serif; color: #002147; 
             font-size: 24px; font-weight: 900; text-align: center;
-            text-transform: uppercase; margin-bottom: 20px;
+            text-transform: uppercase; margin-bottom: 10px;
         }
         
+        .user-info {
+            background-color: #e3f2fd; padding: 10px; border-radius: 8px;
+            color: #0d47a1; font-weight: bold; text-align: center;
+            margin-bottom: 10px; border: 1px solid #bbdefb;
+        }
+
         .timer-digital {
             font-size: 45px; font-weight: 900; color: #d32f2f;
             text-align: center; background-color: #ffebee;
@@ -54,6 +60,9 @@ def inject_css():
             background-color: #002147 !important; color: #FFD700 !important;
             font-weight: bold !important; width: 100%; padding: 12px !important;
         }
+        
+        /* Tùy chỉnh Radio Button nằm ngang cho đẹp */
+        div.row-widget.stRadio > div { flex-direction: row; justify-content: center; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -106,7 +115,6 @@ def lay_giao_trinh(db):
 # --- 6. CHƯƠNG TRÌNH CHÍNH ---
 def main():
     inject_css()
-    # Khởi tạo session state
     if 'vai_tro' not in st.session_state:
         st.session_state.update(
             vai_tro=None, diem_so=0, chi_so=0, 
@@ -134,47 +142,63 @@ def main():
                     st.rerun()
                 else: st.error("Sai thông tin!")
 
-    # --- B. DASHBOARD ---
+    # --- B. DASHBOARD (MENU TRÊN TOP) ---
     else:
-        with st.sidebar:
-            st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=80)
-            st.markdown(f"**{st.session_state['ho_ten']}**")
-            if st.button("ĐĂNG XUẤT"):
-                st.session_state.clear()
-                st.rerun()
+        # 1. HEADER & THÔNG TIN USER
+        c_logo, c_info, c_logout = st.columns([1, 3, 1])
+        with c_logo:
+             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=60)
+        with c_info:
+             st.markdown(f"<div class='user-info'>👮 {st.session_state['ho_ten']} ({st.session_state['vai_tro']})</div>", unsafe_allow_html=True)
+        with c_logout:
+             if st.button("THOÁT"):
+                 st.session_state.clear()
+                 st.rerun()
+        
+        st.divider()
 
+        # 2. MENU NGANG
         role = st.session_state['vai_tro']
         if role == 'Admin': menu_opts = ["QUẢN TRỊ USER", "QUẢN LÝ CÂU HỎI", "GIÁO TRÌNH"]
         elif role == 'GiangVien': menu_opts = ["CẤP QUYỀN THI", "QUẢN LÝ CÂU HỎI", "GIÁO TRÌNH"]
         else: menu_opts = ["THI THỬ", "THI SÁT HẠCH"]
         
-        if st.session_state['bat_dau']: menu = "ĐANG THI"
-        else: menu = st.radio("MENU", menu_opts)
+        # Nếu đang thi thì ẩn menu
+        if st.session_state['bat_dau']: 
+            menu = "ĐANG THI"
+            st.info("⚠️ ĐANG LÀM BÀI THI...")
+        else: 
+            # Dùng Radio button nằm ngang (horizontal=True)
+            menu = st.radio("CHỌN CHỨC NĂNG:", menu_opts, horizontal=True)
 
-        # 1. QUẢN LÝ CÂU HỎI
+        st.write("") # Khoảng cách
+
+        # ------------------------------------
+        # CHỨC NĂNG 1: QUẢN LÝ CÂU HỎI
+        # ------------------------------------
         if menu == "QUẢN LÝ CÂU HỎI":
-            st.info("⚙️ NGÂN HÀNG CÂU HỎI")
+            st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
             ws = db.worksheet("CauHoi")
             vals = ws.get_all_values()
             headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
             
-            # Ép dữ liệu thành 7 cột
             clean = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
             df = pd.DataFrame(clean, columns=headers)
             
             edited = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-            if st.button("LƯU"):
+            if st.button("LƯU CÂU HỎI"):
                 ws.clear(); ws.update([headers] + edited.values.tolist())
                 st.success("Đã lưu!")
 
-        # 2. QUẢN TRỊ USER (ĐÃ BỎ PASSWORD CONFIG GÂY LỖI)
+        # ------------------------------------
+        # CHỨC NĂNG 2: QUẢN TRỊ USER
+        # ------------------------------------
         elif menu == "QUẢN TRỊ USER" or menu == "CẤP QUYỀN THI":
-            st.info("✅ QUẢN LÝ TRẠNG THÁI")
+            st.subheader("✅ QUẢN LÝ TRẠNG THÁI")
             ws = db.worksheet("HocVien")
             vals = ws.get_all_values()
-            
-            # Ép dữ liệu thành 6 cột chuẩn
             headers = ["Username","Password","Role","HoTen","TrangThai","Diem"]
+            
             clean = [r[:6]+[""]*(6-len(r)) for r in vals[1:]] if len(vals)>1 else []
             df = pd.DataFrame(clean, columns=headers)
             
@@ -193,21 +217,25 @@ def main():
                 ws.clear(); ws.update([headers] + full_df.values.tolist())
                 st.success("Đã cập nhật!"); time.sleep(1); st.rerun()
 
-        # 3. GIÁO TRÌNH
+        # ------------------------------------
+        # CHỨC NĂNG 3: GIÁO TRÌNH
+        # ------------------------------------
         elif menu == "GIÁO TRÌNH":
-            st.title("📚 TÀI LIỆU")
+            st.subheader("📚 TÀI LIỆU HỌC TẬP")
             data = lay_giao_trinh(db)
             for l in data:
                 with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
                     st.write(l.get('NoiDung',''))
                     if str(l.get('HinhAnh','')).startswith('http'): st.image(l['HinhAnh'])
 
-        # 4. THI CỬ
+        # ------------------------------------
+        # CHỨC NĂNG 4: THI CỬ
+        # ------------------------------------
         elif "THI" in menu or menu == "ĐANG THI":
             if not st.session_state['bat_dau']:
                 mode = 'thu' if "THỬ" in menu else 'that'
                 st.subheader("LUYỆN TẬP" if mode=='thu' else "SÁT HẠCH CHÍNH THỨC")
-                if st.button("BẮT ĐẦU"):
+                if st.button("BẮT ĐẦU LÀM BÀI"):
                     if mode == 'that':
                         try:
                             c = db.worksheet("HocVien").find(st.session_state['user'])
@@ -233,7 +261,6 @@ def main():
                         if st.session_state['loai_thi'] == 'that':
                             luu_ket_qua(db, st.session_state['user'], st.session_state['diem_so'])
                         
-                        # Reset trạng thái thi nhưng giữ đăng nhập
                         st.session_state.update(bat_dau=False, ds_cau_hoi=[], chi_so=0, diem_so=0, da_nop_cau=False, thoi_gian_het=None, lua_chon=None)
                         st.rerun()
                     st.stop()
@@ -241,7 +268,7 @@ def main():
                 q = qs[idx]
                 while len(q)<7: q.append("")
                 
-                # --- PHẦN 1: ĐANG SUY NGHĨ ---
+                # 1. ĐANG LÀM
                 if not st.session_state['da_nop_cau']:
                     if not st.session_state['thoi_gian_het']: st.session_state['thoi_gian_het'] = time.time()+THOI_GIAN_MOI_CAU
                     left = int(st.session_state['thoi_gian_het'] - time.time())
@@ -263,7 +290,7 @@ def main():
                     
                     time.sleep(1); st.rerun()
                 
-                # --- PHẦN 2: ĐÃ TRẢ LỜI ---
+                # 2. ĐÃ TRẢ LỜI
                 else:
                     st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                     st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
