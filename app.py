@@ -333,7 +333,7 @@ def main():
                     with c1:
                         if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]; 
-                            if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
+                            if len(qs)>0: qs = random.sample(qs, min(20, len(qs)))
                             # RESET trước khi thi mới
                             st.session_state.bat_dau = True
                             st.session_state.ds_cau_hoi = qs
@@ -371,3 +371,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
