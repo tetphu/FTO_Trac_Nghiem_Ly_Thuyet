@@ -21,7 +21,7 @@ except ImportError:
 
 THOI_GIAN_THI = 30
 
-# --- 3. CSS GIAO DIỆN (COMPACT & STICKY) ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_css():
     st.markdown("""
         <style>
@@ -126,27 +126,21 @@ def get_exams(db):
     try: return db.worksheet("CauHoi").get_all_values()
     except: return []
 
-# --- HÀM MỚI: HIỂN THỊ NỘI DUNG HỖN HỢP (TEXT + ẢNH) ---
 def render_mixed_content(content):
     if not content: return
-    # Tách từng dòng để xử lý
     lines = str(content).split('\n')
     for line in lines:
         line = line.strip()
-        # Nếu dòng bắt đầu bằng http -> Coi là link ảnh -> Hiển thị ảnh
         if line.startswith(('http://', 'https://')):
-            try:
-                st.image(line, use_column_width=True)
-            except:
-                st.error(f"⚠️ Không tải được ảnh: {line}")
-        # Nếu là chữ bình thường -> Hiển thị text
-        elif line:
-            st.markdown(line)
+            try: st.image(line, use_column_width=True)
+            except: st.error(f"⚠️ Lỗi ảnh: {line}")
+        elif line: st.markdown(line)
 
 # --- 6. MAIN ---
 def main():
     inject_css()
     
+    # Init Session
     if 'vai_tro' not in st.session_state: st.session_state.vai_tro = None
     if 'bat_dau' not in st.session_state: st.session_state.bat_dau = False
     if 'diem_so' not in st.session_state: st.session_state.diem_so = 0
@@ -179,7 +173,7 @@ def main():
 
     # --- B. DASHBOARD ---
     else:
-        # HEADER COMPACT
+        # HEADER
         c1, c2, c3 = st.columns([1, 4, 1], gap="small")
         with c1: 
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=40)
@@ -207,10 +201,19 @@ def main():
 
         # --- LOGIC THI CỬ ---
         if st.session_state.bat_dau:
+            # HIỂN THỊ TRẠNG THÁI
             if st.session_state.mode == 'thu':
                 st.info("📝 THI THỬ")
+                # NÚT DỪNG THI (RESET TOÀN BỘ)
                 if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
-                    st.session_state.bat_dau = False; st.session_state.ds_cau_hoi = []; st.rerun()
+                    st.session_state.bat_dau = False
+                    st.session_state.ds_cau_hoi = []
+                    st.session_state.chi_so = 0
+                    st.session_state.diem_so = 0
+                    st.session_state.da_nop = False
+                    st.session_state.time_end = None
+                    st.session_state.choice = None
+                    st.rerun()
             else:
                 st.error("🚨 SÁT HẠCH CHÍNH THỨC")
 
@@ -228,7 +231,14 @@ def main():
                             ws.update_cell(cell.row, 5, "DaThi")
                             ws.update_cell(cell.row, 6, str(st.session_state.diem_so))
                         except: pass
-                    st.session_state.bat_dau = False; st.rerun()
+                    # Reset khi kết thúc
+                    st.session_state.bat_dau = False
+                    st.session_state.ds_cau_hoi = []
+                    st.session_state.chi_so = 0
+                    st.session_state.diem_so = 0
+                    st.session_state.da_nop = False
+                    st.session_state.time_end = None
+                    st.rerun()
                 st.stop()
 
             q = qs[idx]
@@ -264,8 +274,6 @@ def main():
 
         else:
             # --- NỘI DUNG TAB ---
-            
-            # 1. QUẢN LÝ
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
@@ -307,32 +315,34 @@ def main():
                         g_data = db.worksheet("GiaoTrinh").get_all_records()
                         for l in g_data:
                             with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                                # Dùng hàm render mới (Text + Ảnh)
                                 render_mixed_content(l.get('NoiDung',''))
                     except: st.warning("Chưa có giáo trình.")
 
-            # 2. HỌC VIÊN
             elif active_tab == "HV":
-                # TAB 1: TÀI LIỆU (ĐƯA LÊN TRƯỚC)
                 with tabs[0]: 
                     st.subheader("📚 TÀI LIỆU ÔN TẬP")
                     try:
                         g_data = db.worksheet("GiaoTrinh").get_all_records()
                         for l in g_data:
                             with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                                # Dùng hàm render mới (Text + Ảnh)
                                 render_mixed_content(l.get('NoiDung',''))
                     except: st.warning("Chưa có dữ liệu.")
 
-                # TAB 2: THI CỬ
                 with tabs[1]:
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]; 
                             if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
-                            st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
-                            st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
+                            # RESET trước khi thi mới
+                            st.session_state.bat_dau = True
+                            st.session_state.ds_cau_hoi = qs
+                            st.session_state.chi_so = 0
+                            st.session_state.diem_so = 0
+                            st.session_state.da_nop = False
+                            st.session_state.time_end = None
+                            st.session_state.choice = None
+                            st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
                         if st.button("🚨 SÁT HẠCH"):
@@ -346,9 +356,17 @@ def main():
                             except Exception as e: msg = f"Lỗi: {str(e)}"
 
                             if allow:
-                                qs = get_exams(db)[1:]; st.session_state.bat_dau = True
-                                st.session_state.ds_cau_hoi = qs; st.session_state.chi_so = 0
-                                st.session_state.diem_so = 0; st.session_state.mode = 'that'; st.rerun()
+                                qs = get_exams(db)[1:]
+                                # RESET trước khi thi thật
+                                st.session_state.bat_dau = True
+                                st.session_state.ds_cau_hoi = qs
+                                st.session_state.chi_so = 0
+                                st.session_state.diem_so = 0
+                                st.session_state.da_nop = False
+                                st.session_state.time_end = None
+                                st.session_state.choice = None
+                                st.session_state.mode = 'that'
+                                st.rerun()
                             else: st.error(msg)
 
 if __name__ == "__main__":
