@@ -3,7 +3,7 @@ import time
 
 # --- 1. CẤU HÌNH TRANG ---
 st.set_page_config(
-    page_title="FTO System",
+    page_title="FTO GCPD",
     page_icon="🚓",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -199,13 +199,13 @@ def main():
         
         # --- TAB MENU ---
         if role == 'Admin':
-            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
+            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU FTO GCPD"])
             active_tab = "Admin"
         elif role == 'GiangVien':
-            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
+            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 TÀI LIỆU FTO GCPD"])
             active_tab = "GV"
         else:
-            tabs = st.tabs(["📚 TÀI LIỆU", "📝 THI CỬ"])
+            tabs = st.tabs(["📚 TÀI LIỆU FTO GCPD", "📝 THI TRẮC NGHIỆM"])
             active_tab = "HV"
 
         # --- LOGIC THI CỬ ---
@@ -217,7 +217,7 @@ def main():
                     st.session_state.ds_cau_hoi = []
                     st.rerun()
             else:
-                st.error("🚨 SÁT HẠCH CHÍNH THỨC")
+                st.error("🚨 THI CHÍNH THỨC")
 
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
@@ -247,7 +247,7 @@ def main():
                 if left <= 0: st.session_state.da_nop = True; st.session_state.choice = None; st.rerun()
 
                 st.markdown(f"<div class='timer-box'>⏳ {left}</div>", unsafe_allow_html=True)
-                st.markdown(f"**Câu {idx+1}:**")
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 
                 # Dynamic Key để tránh lỗi duplicate ID
@@ -259,7 +259,7 @@ def main():
                     st.session_state.da_nop = True; st.rerun()
                 time.sleep(1); st.rerun()
             else:
-                st.markdown(f"**Câu {idx+1}:**")
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 res = st.session_state.choice
                 true = str(q[5]).strip().upper()
@@ -299,7 +299,7 @@ def main():
                         if save_to_sheet(db, "HocVien", final_df): st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
 
                 with tabs[1]:
-                    st.subheader("⚙️ NGÂN HÀNG CÂU HỎI")
+                    st.subheader("⚙️ NGÂN HÀNG CÂU HỎI TRẮC NGHIỆM")
                     q_vals = get_exams(db)
                     q_headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
                     q_data = [r[:7]+[""]*(7-len(r)) for r in q_vals[1:]] if len(q_vals)>1 else []
@@ -309,7 +309,7 @@ def main():
                         if save_to_sheet(db, "CauHoi", q_edit): st.success("Đã lưu!"); time.sleep(1); st.rerun()
 
                 with tabs[2]:
-                    st.subheader("📚 TÀI LIỆU")
+                    st.subheader("📚 TÀI LIỆU FTO GCPD")
                     data = get_giao_trinh(db)
                     if data:
                         for l in data:
@@ -319,7 +319,7 @@ def main():
 
             elif active_tab == "HV":
                 with tabs[0]: 
-                    st.subheader("📚 TÀI LIỆU ÔN TẬP")
+                    st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
                     data = get_giao_trinh(db)
                     if data:
                         for l in data:
@@ -337,20 +337,28 @@ def main():
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.rerun()
                     with c2:
-                        if st.button("🚨 SÁT HẠCH"):
+                        if st.button("🚨 THI CHÍNH THỨC"):
                             allow, msg = False, ""
                             try:
                                 ws = db.worksheet("HocVien")
                                 cell = ws.find(st.session_state.user)
                                 stt = ws.cell(cell.row, 5).value
                                 if stt == "DuocThi": ws.update_cell(cell.row, 5, "DangThi"); allow = True
-                                else: msg = f"⛔ Chưa được cấp quyền! ({stt})"
+                                else: msg = f"⛔ Chưa được cấp quyền Thi chính thức! Liên hệ Giảng Viên phụ trách cho thi (Trạng thái : {stt})"
                             except Exception as e: msg = f"Lỗi: {str(e)}"
 
                             if allow:
-                                qs = get_exams(db)[1:]; st.session_state.bat_dau = True
-                                st.session_state.ds_cau_hoi = qs; st.session_state.chi_so = 0
-                                st.session_state.diem_so = 0; st.session_state.mode = 'that'; st.rerun()
+                                qs = get_exams(db)[1:]
+                                # --- ĐÃ THÊM RANDOM 30 CÂU CHO SÁT HẠCH Ở ĐÂY ---
+                                if len(qs) > 0: 
+                                    qs = random.sample(qs, min(30, len(qs)))
+                                
+                                st.session_state.bat_dau = True
+                                st.session_state.ds_cau_hoi = qs
+                                st.session_state.chi_so = 0
+                                st.session_state.diem_so = 0
+                                st.session_state.mode = 'that'
+                                st.rerun()
                             else: st.error(msg)
 
 if __name__ == "__main__":
