@@ -351,7 +351,7 @@ def main():
                                 qs = get_exams(db)[1:]
                                 # --- ĐÃ THÊM RANDOM 30 CÂU CHO SÁT HẠCH Ở ĐÂY ---
                                 if len(qs) > 0: 
-                                    qs = random.sample(qs, min(30, len(qs)))
+                                    qs = random.sample(qs, min(40, len(qs)))
                                 
                                 st.session_state.bat_dau = True
                                 st.session_state.ds_cau_hoi = qs
@@ -363,3 +363,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
