@@ -167,7 +167,7 @@ def main():
     if st.session_state.vai_tro is None:
         c1, c2 = st.columns([1, 2.5])
         with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
-        with c2: st.markdown('<div class="gcpd-title">ACADEMY LOGIN</div>', unsafe_allow_html=True)
+        with c2: st.markdown('<div class="gcpd-title">FTO GACHA CITY <BR> POLICE DERPARTMENT</div>', unsafe_allow_html=True)
         
         with st.form("login"):
             u = st.text_input("SỐ HIỆU (Momo)")
@@ -363,4 +363,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
