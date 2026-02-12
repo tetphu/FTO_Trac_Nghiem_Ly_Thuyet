@@ -332,7 +332,7 @@ def main():
                     with c1:
                         if st.button("📝 THI THỬ"):
                             qs = get_exams(db)[1:]; 
-                            if len(qs)>0: qs = random.sample(qs, min(10, len(qs)))
+                            if len(qs)>0: qs = random.sample(qs, min(30, len(qs)))
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.rerun()
@@ -363,5 +363,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
