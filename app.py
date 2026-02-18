@@ -103,7 +103,6 @@ def ket_noi_csdl():
 # --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
-        # Không cache login để đảm bảo bảo mật và cập nhật trạng thái mới nhất
         rows = db.worksheet("HocVien").get_all_values()
         for r in rows[1:]:
             if len(r) < 3: continue
@@ -118,13 +117,12 @@ def save_to_sheet(db, sheet_name, df_to_save):
         ws.clear()
         data = [df_to_save.columns.tolist()] + df_to_save.values.tolist()
         ws.update(data)
-        st.cache_data.clear() # Xóa cache sau khi lưu để cập nhật dữ liệu mới
+        st.cache_data.clear() # Xóa cache sau khi lưu
         return True
     except Exception as e:
         st.error(f"Lỗi lưu: {e}")
         return False
 
-# Cache dữ liệu câu hỏi để tránh đọc liên tục gây lỗi 429
 @st.cache_data(ttl=300) 
 def get_exams(_db):
     try: return _db.worksheet("CauHoi").get_all_values()
@@ -135,15 +133,22 @@ def get_giao_trinh(_db):
     try: return _db.worksheet("GiaoTrinh").get_all_records()
     except: return []
 
+# --- FIX LỖI ẢNH ĐIỆN THOẠI Ở HÀM NÀY ---
 def render_mixed_content(content):
     if not content: return
     lines = str(content).split('\n')
     for line in lines:
         line = line.strip()
-        if line.startswith(('http://', 'https://')):
-            try: st.image(line, use_column_width=True)
-            except: st.error("Lỗi ảnh")
-        elif line: st.markdown(line, unsafe_allow_html=True)
+        # Lọc bỏ dấu cách hoặc dấu thừa nếu lỡ gõ sai trong Google Sheet
+        clean_line = line.strip(" -\"'")
+        if clean_line.startswith(('http://', 'https://')):
+            try:
+                # Ép trình duyệt dùng thẻ <img> HTML. Đảm bảo 100% lên hình ở mobile.
+                st.markdown(f"<img src='{clean_line}' style='width: 100%; max-width: 600px; border-radius: 8px; margin: 10px 0; display: block;'>", unsafe_allow_html=True)
+            except: 
+                st.error("⚠️ Lỗi tải ảnh")
+        elif line: 
+            st.markdown(line, unsafe_allow_html=True)
 
 # --- 6. MAIN ---
 def main():
@@ -331,7 +336,7 @@ def main():
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("📝 THI THỬ"):
-                            qs = get_exams(db)[1:]; 
+                            qs = get_exams(db)[1:] 
                             if len(qs)>0: qs = random.sample(qs, min(30, len(qs)))
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
@@ -349,7 +354,6 @@ def main():
 
                             if allow:
                                 qs = get_exams(db)[1:]
-                                # --- ĐÃ THÊM RANDOM 30 CÂU CHO SÁT HẠCH Ở ĐÂY ---
                                 if len(qs) > 0: 
                                     qs = random.sample(qs, min(40, len(qs)))
                                 
@@ -363,6 +367,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
