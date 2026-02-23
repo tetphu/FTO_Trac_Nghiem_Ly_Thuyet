@@ -139,11 +139,20 @@ def render_mixed_content(content):
     for line in lines:
         line = line.strip()
         clean_line = line.strip(" -\"'")
+        
+        # Kiểm tra nếu dòng đó chứa đường link
         if clean_line.startswith(('http://', 'https://')):
             try:
-                st.markdown(f"<img src='{clean_line}' style='width: 100%; max-width: 600px; border-radius: 8px; margin: 10px 0; display: block;'>", unsafe_allow_html=True)
-            except: 
-                st.error("⚠️ Lỗi tải ảnh")
+                # 1. Ưu tiên dùng hàm chuẩn của Streamlit (chống vỡ ảnh và tương thích mobile tốt hơn HTML)
+                st.image(clean_line, use_container_width=True)
+            except Exception:
+                pass # Nếu thư viện không đọc được ảnh, cứ bỏ qua để chạy bước 2
+            
+            # 2. BƯỚC QUAN TRỌNG: Luôn tạo một link bấm được. 
+            # Nếu điện thoại chặn ảnh (tàng hình), học viên vẫn thấy dòng này để bấm vào xem tài liệu.
+            st.markdown(f"🔗 [*Nhấn vào đây để xem Ảnh/Tài liệu nếu không hiển thị*]({clean_line})")
+            st.write("") # Thêm 1 dòng trống cho thoáng
+            
         elif line: 
             st.markdown(line, unsafe_allow_html=True)
 
