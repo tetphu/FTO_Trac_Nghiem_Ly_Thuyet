@@ -19,7 +19,7 @@ except ImportError:
     st.error("Lỗi thư viện. Hãy kiểm tra requirements.txt")
     st.stop()
 
-THOI_GIAN_THI = 20
+THOI_GIAN_THI = 15
 
 # --- 3. CSS GIAO DIỆN ---
 def inject_css():
@@ -376,4 +376,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
