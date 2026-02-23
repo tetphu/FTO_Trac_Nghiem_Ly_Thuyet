@@ -133,17 +133,14 @@ def get_giao_trinh(_db):
     try: return _db.worksheet("GiaoTrinh").get_all_records()
     except: return []
 
-# --- FIX LỖI ẢNH ĐIỆN THOẠI Ở HÀM NÀY ---
 def render_mixed_content(content):
     if not content: return
     lines = str(content).split('\n')
     for line in lines:
         line = line.strip()
-        # Lọc bỏ dấu cách hoặc dấu thừa nếu lỡ gõ sai trong Google Sheet
         clean_line = line.strip(" -\"'")
         if clean_line.startswith(('http://', 'https://')):
             try:
-                # Ép trình duyệt dùng thẻ <img> HTML. Đảm bảo 100% lên hình ở mobile.
                 st.markdown(f"<img src='{clean_line}' style='width: 100%; max-width: 600px; border-radius: 8px; margin: 10px 0; display: block;'>", unsafe_allow_html=True)
             except: 
                 st.error("⚠️ Lỗi tải ảnh")
@@ -227,10 +224,23 @@ def main():
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
             
+            # KHI HOÀN THÀNH BÀI THI
             if idx >= len(qs):
-                st.balloons()
-                st.success(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
-                if st.button("KẾT THÚC"):
+                # XÉT KẾT QUẢ ĐỖ / TRƯỢT
+                if st.session_state.get('mode') == 'that':
+                    if st.session_state.diem_so >= 35:
+                        st.balloons()
+                        st.success(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
+                        st.success("🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
+                    else:
+                        st.error(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
+                        st.warning("❌ Bạn cần cố gắng ôn luyện thêm. Liên hệ Giảng viên để được cấp quyền thi lại.")
+                else:
+                    # Chế độ thi thử
+                    st.balloons()
+                    st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
+
+                if st.button("NỘP BÀI THI"):
                     if st.session_state.get('mode') == 'that':
                         try:
                             ws = db.worksheet("HocVien")
@@ -255,7 +265,6 @@ def main():
                 st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
                 st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
                 
-                # Dynamic Key để tránh lỗi duplicate ID
                 ans = st.radio("Chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key=f"q_{idx}")
                 
                 st.write("")
