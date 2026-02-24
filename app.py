@@ -143,15 +143,14 @@ def render_mixed_content(content):
         # Kiểm tra nếu dòng đó chứa đường link
         if clean_line.startswith(('http://', 'https://')):
             try:
-                # 1. Ưu tiên dùng hàm chuẩn của Streamlit (chống vỡ ảnh và tương thích mobile tốt hơn HTML)
+                # 1. Ưu tiên dùng hàm chuẩn của Streamlit
                 st.image(clean_line, use_container_width=True)
             except Exception:
-                pass # Nếu thư viện không đọc được ảnh, cứ bỏ qua để chạy bước 2
+                pass 
             
-            # 2. BƯỚC QUAN TRỌNG: Luôn tạo một link bấm được. 
-            # Nếu điện thoại chặn ảnh (tàng hình), học viên vẫn thấy dòng này để bấm vào xem tài liệu.
+            # 2. Tạo link dự phòng
             st.markdown(f"🔗 [*Nhấn vào đây để xem Ảnh/Tài liệu nếu không hiển thị*]({clean_line})")
-            st.write("") # Thêm 1 dòng trống cho thoáng
+            st.write("") 
             
         elif line: 
             st.markdown(line, unsafe_allow_html=True)
@@ -233,11 +232,11 @@ def main():
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
             
-            # KHI HOÀN THÀNH BÀI THI
+            # --- KHI HOÀN THÀNH BÀI THI ---
             if idx >= len(qs):
-                # XÉT KẾT QUẢ ĐỖ / TRƯỢT
                 if st.session_state.get('mode') == 'that':
-                    if st.session_state.diem_so >= 35:
+                    # --- ĐIỀU KIỆN ĐỖ MỚI: 45 CÂU TRỞ LÊN ---
+                    if st.session_state.diem_so >= 45:
                         st.balloons()
                         st.success(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
                         st.success("🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
@@ -372,8 +371,9 @@ def main():
 
                             if allow:
                                 qs = get_exams(db)[1:]
+                                # --- RANDOM 50 CÂU CHO THI CHÍNH THỨC ---
                                 if len(qs) > 0: 
-                                    qs = random.sample(qs, min(40, len(qs)))
+                                    qs = random.sample(qs, min(50, len(qs)))
                                 
                                 st.session_state.bat_dau = True
                                 st.session_state.ds_cau_hoi = qs
@@ -385,6 +385,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
