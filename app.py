@@ -23,25 +23,113 @@ except ImportError:
 THOI_GIAN_THI = 25
 GIOI_HAN_THI_NGAY = 3 # Tối đa 3 lần thi chính thức / ngày
 
-# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
+# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP (CHUẨN THIẾT KẾ MỚI) ---
 def inject_login_css():
     st.markdown("""
         <style>
-        .stApp { background-color: #e9ecef !important; font-family: 'Segoe UI', sans-serif; }
-        .block-container { max-width: 450px !important; padding-top: 8vh !important; background: transparent !important; border: none !important; box-shadow: none !important; }
-        [data-testid="stForm"] { background-color: white !important; border-radius: 12px !important; border: none !important; box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; overflow: hidden !important; padding: 0 !important; }
-        .login-header { background-color: #031c36; padding: 40px 20px 30px 20px; text-align: center; margin-bottom: 20px; margin-top: -1rem; }
-        .gcpd-logo { background-color: #fccc04; color: #031c36; width: 85px; height: 85px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; margin: 0 auto 20px auto; }
-        .gcpd-title { color: white; font-size: 22px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; line-height: 1.3; }
-        .gcpd-subtitle { color: #94a3b8; font-size: 13px; font-weight: 600; letter-spacing: 1.5px; }
-        .stTextInput { padding: 0 30px !important; margin-bottom: 5px !important; }
-        .stTextInput label p { color: #64748b !important; font-size: 13px !important; font-weight: 700 !important; text-transform: uppercase; }
-        .stTextInput input { border-radius: 8px !important; border: 1px solid #e2e8f0 !important; padding: 12px 15px !important; font-size: 15px !important;}
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+
+        .stApp { 
+            background-color: #e9ecef !important; 
+            font-family: 'Montserrat', sans-serif !important; 
+        }
+        
+        .block-container { 
+            max-width: 420px !important; 
+            padding-top: 8vh !important; 
+            background: transparent !important; 
+            border: none !important; 
+            box-shadow: none !important; 
+        }
+        
+        [data-testid="stForm"] { 
+            background-color: white !important; 
+            border-radius: 12px !important; 
+            border: none !important; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; 
+            padding: 0 !important; 
+            overflow: hidden !important;
+        }
+        
+        .login-header { 
+            background-color: #031c36; 
+            padding: 40px 20px 30px 20px; 
+            text-align: center; 
+            margin-bottom: 25px; 
+        }
+        
+        .gcpd-logo { 
+            background-color: #fccc04; 
+            color: #031c36; 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 900; 
+            font-size: 22px; 
+            margin: 0 auto 15px auto; 
+            font-family: Arial, sans-serif;
+        }
+        
+        .gcpd-title { 
+            color: white; 
+            font-size: 20px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            line-height: 1.3; 
+        }
+        
+        .gcpd-subtitle { 
+            color: #94a3b8; 
+            font-size: 12px; 
+            font-weight: 600; 
+            letter-spacing: 1.5px; 
+        }
+        
+        .stTextInput { padding: 0 30px !important; margin-bottom: 15px !important; }
+        .stTextInput label p { 
+            color: #64748b !important; 
+            font-size: 12px !important; 
+            font-weight: 700 !important; 
+            text-transform: uppercase; 
+        }
+        .stTextInput input { 
+            border-radius: 8px !important; 
+            border: 1px solid #e2e8f0 !important; 
+            padding: 12px 15px !important; 
+            font-size: 14px !important;
+            color: #333 !important;
+        }
         .stTextInput input:focus { border-color: #031c36 !important; box-shadow: 0 0 0 1px #031c36 !important; }
-        .stButton { padding: 15px 30px 35px 30px !important; }
-        .stButton button { width: 100% !important; background-color: #031c36 !important; border-radius: 8px !important; padding: 12px !important; border: none !important; }
-        .stButton button p { color: #fccc04 !important; font-weight: 800 !important; font-size: 16px !important; margin: 0; text-transform: uppercase; }
-        .stButton button:hover { background-color: #021224 !important; }
+        
+        /* Căn giữa nút đăng nhập và kéo dài 100% */
+        [data-testid="stFormSubmitButton"] {
+            padding: 10px 30px 35px 30px !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        [data-testid="stFormSubmitButton"] button { 
+            width: 100% !important; 
+            background-color: #031c36 !important; 
+            border-radius: 8px !important; 
+            padding: 12px !important; 
+            border: none !important; 
+            transition: background-color 0.2s !important;
+        }
+        [data-testid="stFormSubmitButton"] button p { 
+            color: #fccc04 !important; 
+            font-weight: 800 !important; 
+            font-size: 15px !important; 
+            margin: 0 !important; 
+            text-transform: uppercase; 
+            text-align: center !important;
+            width: 100% !important;
+        }
+        [data-testid="stFormSubmitButton"] button:hover { background-color: #052648 !important; }
+        
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
@@ -50,22 +138,24 @@ def inject_login_css():
 def inject_dashboard_css():
     st.markdown("""
         <style>
-        .stApp { background-color: #dbe2ef !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+        
+        .stApp { background-color: #dbe2ef !important; font-family: 'Montserrat', sans-serif !important; }
         .block-container { background-color: #ffffff !important; border: 3px solid #112d4e !important; border-radius: 15px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; padding: 2.5rem 2rem !important; margin-top: 2rem !important; margin-bottom: 2rem !important; max-width: 900px; }
         @media (max-width: 768px) { .block-container { padding: 1.5rem 1rem !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; border: 2px solid #112d4e !important; border-radius: 10px !important; } }
-        .stMarkdown, .stText, p, h1, h2, h3, label { color: #112d4e !important; }
+        .stMarkdown, .stText, p, h1, h2, h3, label { color: #112d4e !important; font-family: 'Montserrat', sans-serif !important; }
         
         div[data-baseweb="tab-list"] { position: sticky; top: 0; z-index: 999; background-color: #ffffff; padding-top: 15px; border-bottom: 2px solid #e0e0e0; gap: 8px; }
-        .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; }
+        .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif; }
         .stTabs [aria-selected="true"] { background-color: #f8f9fa !important; color: #0b2545 !important; border-top: 3px solid #134074 !important; border-left: 1px solid #e0e0e0 !important; border-right: 1px solid #e0e0e0 !important; }
         
         .question-box { background: #f8f9fa; padding: 20px; border-left: 5px solid #134074; border-radius: 8px; font-weight: 600; color: #112d4e !important; margin-bottom: 15px; font-size: 16px; line-height: 1.6; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
-        .stRadio div[role="radiogroup"] label p { color: #2c3e50 !important; font-weight: 500; font-size: 15px; }
-        .explain-box { background: #e8f4f8; padding: 15px; border-radius: 8px; color: #0c5460 !important; font-size: 14px; font-weight: 500; border: 1px solid #bee5eb; margin-top: 10px; }
-        .timer-box { font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: white !important; background: linear-gradient(135deg, #e63946, #d62828); padding: 5px 20px; border-radius: 20px; width: fit-content; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); }
+        .stRadio div[role="radiogroup"] label p { color: #2c3e50 !important; font-weight: 600; font-size: 15px; }
+        .explain-box { background: #e8f4f8; padding: 15px; border-radius: 8px; color: #0c5460 !important; font-size: 14px; font-weight: 600; border: 1px solid #bee5eb; margin-top: 10px; }
+        .timer-box { font-family: 'Courier New', monospace !important; font-size: 24px; font-weight: bold; color: white !important; background: linear-gradient(135deg, #e63946, #d62828); padding: 5px 20px; border-radius: 20px; width: fit-content; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); }
         
         .stButton button { background: linear-gradient(135deg, #134074, #0b2545) !important; border: none !important; border-radius: 6px !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; transition: all 0.2s ease-in-out !important; }
-        .stButton button p { color: white !important; font-weight: 600 !important; font-size: 14px !important; }
+        .stButton button p { color: white !important; font-weight: 700 !important; font-size: 14px !important; text-align: center; width: 100%;}
         .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; }
         
         div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")), button:has(div:contains("DỪNG LÀM BÀI")), button:has(div:contains("BỎ KHÔNG THI NỮA")) { background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; }
@@ -154,7 +244,7 @@ def main():
     if 'da_nop' not in st.session_state: st.session_state.da_nop = False
     if 'time_end' not in st.session_state: st.session_state.time_end = None
     if 'choice' not in st.session_state: st.session_state.choice = None
-    if 'da_luu_ket_qua' not in st.session_state: st.session_state.da_luu_ket_qua = False # MỚI: Cờ kiểm soát việc lưu tự động
+    if 'da_luu_ket_qua' not in st.session_state: st.session_state.da_luu_ket_qua = False 
 
     db = ket_noi_csdl()
     if not db: 
@@ -242,18 +332,18 @@ def main():
             if role == "hocvien":
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
-                    <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px;">Số lần thi thử: <b style="color: white;">{lan_thu}</b></div>
-                    <div style="color: #e0e0e0; font-size: 13px;">Thi chính thức hôm nay: <b style="color: #fccc04;">Còn {remaining}/{GIOI_HAN_THI_NGAY}</b></div>
+                    <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Số lần thi thử: <b style="color: white;">{lan_thu}</b></div>
+                    <div style="color: #e0e0e0; font-size: 13px; font-family: 'Montserrat', sans-serif;">Thi chính thức hôm nay: <b style="color: #fccc04;">Còn {remaining}/{GIOI_HAN_THI_NGAY}</b></div>
                 </div>
                 """
                 
             st.markdown(f"""
                 <div style="background-color: #031c36; padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center;">
-                        <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px;">GCPD</div>
+                        <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px; font-family: Arial, sans-serif;">GCPD</div>
                         <div>
-                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase;">GCPD DASHBOARD</div>
-                            <div style="color: #fccc04; font-size: 13px; font-weight: 600;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
+                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase; font-family: 'Montserrat', sans-serif;">GCPD DASHBOARD</div>
+                            <div style="color: #fccc04; font-size: 13px; font-weight: 700; font-family: 'Montserrat', sans-serif;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
                         </div>
                     </div>
                     {stats_html}
@@ -308,7 +398,6 @@ def main():
             # --- KHI HOÀN THÀNH BÀI THI (TỰ ĐỘNG CHỐT) ---
             # ==========================================
             if idx >= len(qs):
-                # 1. Tự động lưu lên hệ thống đúng 1 lần duy nhất
                 if not st.session_state.get('da_luu_ket_qua', False):
                     if st.session_state.get('mode') == 'that':
                         try:
@@ -319,7 +408,6 @@ def main():
                         except: pass
                     st.session_state.da_luu_ket_qua = True
 
-                # 2. Hiển thị điểm số ngay lập tức
                 if st.session_state.get('mode') == 'that':
                     if st.session_state.diem_so >= 45:
                         st.balloons()
@@ -332,7 +420,6 @@ def main():
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
 
-                # 3. Nút thoát khỏi kỳ thi
                 if st.button("🏠 QUAY VỀ BẢNG ĐIỀU KHIỂN"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -474,7 +561,7 @@ def main():
                                         ws_hocvien.update_cell(user_row_idx, 6, "0") 
                                         ws_hocvien.update_cell(user_row_idx, 8, str(lan_that))   
                                         ws_hocvien.update_cell(user_row_idx, 9, new_ngay_solan)  
-                                        st.cache_data.clear() # Cập nhật cache
+                                        st.cache_data.clear() 
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
