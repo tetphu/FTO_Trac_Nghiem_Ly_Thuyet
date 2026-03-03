@@ -166,7 +166,7 @@ def main():
                 <div class="login-header">
                     <div class="gcpd-logo">FTO</div>
                     <div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>
-                    <div class="gcpd-subtitle">TRAINING & ASSESSMENT</div>
+                    <div class="gcpd-subtitle">HỌC VÀ THI TRẮC NGHIỆM LÝ THUYẾT</div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -470,3 +470,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
