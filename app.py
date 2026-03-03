@@ -23,7 +23,7 @@ except ImportError:
 THOI_GIAN_THI = 25
 GIOI_HAN_THI_NGAY = 3 # Tối đa 3 lần thi chính thức / ngày
 
-# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
+# --- 3. CSS GIAO DIỆN ---
 def inject_login_css():
     st.markdown("""
         <style>
@@ -46,7 +46,6 @@ def inject_login_css():
         </style>
     """, unsafe_allow_html=True)
 
-# --- 3.1 CSS GIAO DIỆN QUẢN LÝ / THI CỬ (DASHBOARD) ---
 def inject_dashboard_css():
     st.markdown("""
         <style>
@@ -78,7 +77,7 @@ def inject_dashboard_css():
     """, unsafe_allow_html=True)
 
 
-# --- 4. KẾT NỐI DATABASE ---
+# --- 4. KẾT NỐI DATABASE & CACHE TỐI ƯU ---
 @st.cache_resource
 def ket_noi_csdl():
     try:
@@ -91,10 +90,26 @@ def ket_noi_csdl():
     except Exception as e:
         return None
 
+# MỚI: Cache dữ liệu học viên để tránh lỗi 429 khi đổi câu hỏi
+@st.cache_data(ttl=60)
+def get_all_hocvien(_db):
+    try: return _db.worksheet("HocVien").get_all_values()
+    except: return []
+
+@st.cache_data(ttl=300) 
+def get_exams(_db):
+    try: return _db.worksheet("CauHoi").get_all_values()
+    except: return []
+
+@st.cache_data(ttl=300)
+def get_giao_trinh(_db):
+    try: return _db.worksheet("GiaoTrinh").get_all_records()
+    except: return []
+
 # --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
-        rows = db.worksheet("HocVien").get_all_values()
+        rows = get_all_hocvien(db) # Sử dụng cache
         for r in rows[1:]:
             if len(r) < 3: continue
             if str(r[0]).strip() == str(u).strip() and str(r[1]).strip() == str(p).strip():
@@ -114,16 +129,6 @@ def save_to_sheet(db, sheet_name, df_to_save):
     except Exception as e:
         st.error(f"Lỗi lưu: {e}")
         return False
-
-@st.cache_data(ttl=300) 
-def get_exams(_db):
-    try: return _db.worksheet("CauHoi").get_all_values()
-    except: return []
-
-@st.cache_data(ttl=300)
-def get_giao_trinh(_db):
-    try: return _db.worksheet("GiaoTrinh").get_all_records()
-    except: return []
 
 def render_mixed_content(content):
     if not content: return
@@ -164,9 +169,9 @@ def main():
         with st.form("login_form"):
             st.markdown("""
                 <div class="login-header">
-                    <div class="gcpd-logo">FTO</div>
-                    <div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>
-                    <div class="gcpd-subtitle">HỌC VÀ THI TRẮC NGHIỆM LÝ THUYẾT</div>
+                    <div class="gcpd-logo">GCPD</div>
+                    <div class="gcpd-title">FTO GACHA CITY<br>POLICE DEPARTMENT</div>
+                    <div class="gcpd-subtitle">TRAINING & ASSESSMENT</div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -191,8 +196,8 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        ws_hocvien = db.worksheet("HocVien")
-        all_hv_vals = ws_hocvien.get_all_values()
+        # Đọc dữ liệu từ Cache (Rất nhanh và an toàn)
+        all_hv_vals = get_all_hocvien(db)
         user_row_idx = None
         user_row_data = []
         for i, r in enumerate(all_hv_vals):
@@ -219,17 +224,16 @@ def main():
         if remaining < 0: remaining = 0
         if stt == "Khoa": remaining = 0
 
-        # --- BẪY LỖI: KIỂM TRA NẾU VỪA F5 TRONG LÚC ĐANG THI CHÍNH THỨC ---
-        # Khi web mới load lại (bat_dau = False) mà sheet vẫn đang ghi là DangThi
+        # --- BẪY LỖI: KIỂM TRA F5 HOẶC RỚT MẠNG ---
         if stt == "DangThi" and not st.session_state.bat_dau:
             try:
-                # Ép nộp bài ngay lập tức (Điểm đã được ghi = 0 lúc bắt đầu thi)
+                ws_hocvien = db.worksheet("HocVien")
                 ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                stt = "DaThi" # Cập nhật trạng thái hiển thị
+                st.cache_data.clear() # Cập nhật cache
+                stt = "DaThi" 
                 st.error("🚨 HỆ THỐNG PHÁT HIỆN BẠN ĐÃ TẢI LẠI TRANG (F5) HOẶC THOÁT RA ĐỘT NGỘT!")
                 st.warning("Bài thi đã tự động nộp với điểm số 0 và bạn đã bị tính mất 1 lượt thi.")
             except: pass
-
 
         # --- HEADER DASHBOARD ---
         col1, col2 = st.columns([4.5, 1.2])
@@ -286,8 +290,10 @@ def main():
                 st.error("🚨 THI CHÍNH THỨC (CẤM TẢI LẠI TRANG)")
                 if st.button("🏳️ KHÓ QUÁ BỎ KHÔNG THI NỮA", key="give_up_exam"):
                     try:
+                        ws_hocvien = db.worksheet("HocVien")
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                         ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
+                        st.cache_data.clear() # Xóa bộ nhớ đệm
                     except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -313,9 +319,10 @@ def main():
                 if st.button("NỘP BÀI THI"):
                     if st.session_state.get('mode') == 'that':
                         try:
-                            # Chốt điểm cuối cùng lên Google Sheets
+                            ws_hocvien = db.worksheet("HocVien")
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
+                            st.cache_data.clear() 
                         except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -355,9 +362,6 @@ def main():
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
                     
-                    # CẮT BỎ HOÀN TOÀN PHẦN CẬP NHẬT SHEET TRUNG GIAN Ở ĐÂY
-                    # Dữ liệu thi chỉ nằm trên RAM của Streamlit
-
                     st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
 
         else:
@@ -422,7 +426,10 @@ def main():
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("📝 THI THỬ"):
-                            try: ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1)) 
+                            try: 
+                                ws_hocvien = db.worksheet("HocVien")
+                                ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1))
+                                st.cache_data.clear()
                             except: pass
                             
                             all_qs = get_exams(db)[1:] 
@@ -445,16 +452,17 @@ def main():
                                 elif stt in ["DuocThi", "DaThi"]:
                                     if len(all_qs) > 0: 
                                         qs = random.sample(all_qs, min(50, len(all_qs)))
-                                        
                                         daily_count += 1
                                         lan_that += 1
                                         new_ngay_solan = f"{today_str}|{daily_count}"
                                         
-                                        # BẮT ĐẦU THI: Đánh dấu đang thi, set điểm tạm = 0
+                                        # Ghi điểm = 0 ngay từ đầu, phòng trường hợp F5
+                                        ws_hocvien = db.worksheet("HocVien")
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 6, "0") 
                                         ws_hocvien.update_cell(user_row_idx, 8, str(lan_that))   
                                         ws_hocvien.update_cell(user_row_idx, 9, new_ngay_solan)  
+                                        st.cache_data.clear() # Cập nhật cache
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
@@ -470,4 +478,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
