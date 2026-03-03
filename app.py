@@ -21,144 +21,137 @@ except ImportError:
 
 THOI_GIAN_THI = 25
 
-# --- 3. CSS GIAO DIỆN CHUYÊN NGHIỆP & RESPONSIVE ---
-def inject_css():
+# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP (GIỐNG ẢNH BẠN GỬI) ---
+def inject_login_css():
     st.markdown("""
         <style>
-        /* Ép nền toàn trang web thành Xám xanh đậm (Tạo nền) */
-        .stApp { 
-            background-color: #dbe2ef !important; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        .stApp { background-color: #e9ecef !important; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Căn giữa card đăng nhập */
+        .block-container { 
+            max-width: 450px !important; 
+            padding-top: 8vh !important; 
+            background: transparent !important; 
+            border: none !important; 
+            box-shadow: none !important; 
         }
         
-        /* Tạo khung viền (Card) chứa nội dung chính ở giữa trang */
+        /* Tùy chỉnh khung form của Streamlit */
+        [data-testid="stForm"] {
+            background-color: white !important;
+            border-radius: 12px !important;
+            border: none !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+        }
+        
+        /* Nửa trên (Xanh Navy) */
+        .login-header {
+            background-color: #031c36;
+            padding: 40px 20px 30px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            margin-top: -1rem; /* Bù trừ khoảng trống mặc định */
+        }
+        
+        /* Logo tròn màu vàng */
+        .gcpd-logo {
+            background-color: #fccc04;
+            color: #031c36;
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 24px;
+            margin: 0 auto 20px auto;
+        }
+        
+        .gcpd-title {
+            color: white;
+            font-size: 22px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .gcpd-subtitle {
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+        
+        /* Chỉnh CSS các ô nhập liệu */
+        .stTextInput { padding: 0 30px !important; margin-bottom: 5px !important; }
+        .stTextInput label p { color: #64748b !important; font-size: 13px !important; font-weight: 700 !important; text-transform: uppercase; }
+        .stTextInput input { border-radius: 8px !important; border: 1px solid #e2e8f0 !important; padding: 12px 15px !important; font-size: 15px !important;}
+        .stTextInput input:focus { border-color: #031c36 !important; box-shadow: 0 0 0 1px #031c36 !important; }
+        
+        /* Chỉnh CSS Nút Đăng nhập */
+        .stButton { padding: 15px 30px 35px 30px !important; }
+        .stButton button { 
+            width: 100% !important; 
+            background-color: #031c36 !important; 
+            border-radius: 8px !important; 
+            padding: 12px !important; 
+            border: none !important;
+        }
+        .stButton button p {
+            color: #fccc04 !important; 
+            font-weight: 800 !important; 
+            font-size: 16px !important; 
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .stButton button:hover { background-color: #021224 !important; }
+        
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
+        </style>
+    """, unsafe_allow_html=True)
+
+
+# --- 3.1 CSS GIAO DIỆN QUẢN LÝ / THI CỬ (DASHBOARD) ---
+def inject_dashboard_css():
+    st.markdown("""
+        <style>
+        .stApp { background-color: #dbe2ef !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         .block-container { 
             background-color: #ffffff !important; 
             border: 3px solid #112d4e !important;
             border-radius: 15px !important;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
             padding: 2.5rem 2rem !important; 
-            margin-top: 2rem !important;
-            margin-bottom: 2rem !important;
-            max-width: 900px; 
+            margin-top: 2rem !important; margin-bottom: 2rem !important; max-width: 900px; 
         }
-
-        /* Tinh chỉnh riêng cho giao diện điện thoại (Màn hình nhỏ) */
         @media (max-width: 768px) {
-            .block-container {
-                padding: 1.5rem 1rem !important;
-                margin-top: 0.5rem !important;
-                margin-bottom: 0.5rem !important;
-                border: 2px solid #112d4e !important;
-                border-radius: 10px !important;
-            }
+            .block-container { padding: 1.5rem 1rem !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; border: 2px solid #112d4e !important; border-radius: 10px !important; }
         }
-
-        /* SỬA LỖI CHỮ TRẮNG: Ép màu chữ mặc định trong khung là màu xanh đen */
-        .stMarkdown, .stText, p, h1, h2, h3, label {
-            color: #112d4e !important;
-        }
-
-        /* Banner & Tiêu đề chính */
-        .gcpd-title { 
-            color: #0b2545 !important; font-size: 26px; font-weight: 900; 
-            text-align: center; text-transform: uppercase; 
-            margin-bottom: 0px; letter-spacing: 1.5px; 
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1); 
-        }
-        
-        /* Huy hiệu User */
-        .user-info { 
-            background: linear-gradient(135deg, #0b2545, #134074); 
-            color: white !important; padding: 6px 18px; border-radius: 30px; 
-            font-size: 13px; font-weight: 600; text-align: center; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            display: inline-block; margin-top: 10px; 
-        }
-        
-        /* Tabs (Menu) */
-        div[data-baseweb="tab-list"] { 
-            position: sticky; top: 0; z-index: 999; 
-            background-color: #ffffff; padding-top: 15px; 
-            border-bottom: 2px solid #e0e0e0; gap: 8px; 
-        }
-        .stTabs [data-baseweb="tab"] { 
-            height: 40px; padding: 0 20px; 
-            background-color: transparent; border-radius: 8px 8px 0 0; 
-            color: #7f8c8d !important; font-size: 14px; font-weight: 700; 
-            border: none; transition: all 0.3s ease; 
-        }
-        .stTabs [aria-selected="true"] { 
-            background-color: #f8f9fa !important; color: #0b2545 !important; 
-            border-top: 3px solid #134074 !important; 
-            border-left: 1px solid #e0e0e0 !important; 
-            border-right: 1px solid #e0e0e0 !important; 
-        }
-
-        /* Khối Câu Hỏi & Radio Buttons */
-        .question-box { 
-            background: #f8f9fa; padding: 20px; 
-            border-left: 5px solid #134074; border-radius: 8px; 
-            font-weight: 600; color: #112d4e !important; 
-            margin-bottom: 15px; font-size: 16px; line-height: 1.6; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.04); 
-        }
-        .stRadio div[role="radiogroup"] label p {
-            color: #2c3e50 !important; font-weight: 500; font-size: 15px;
-        }
-
-        /* Khối Giải Thích Đáp Án */
-        .explain-box { 
-            background: #e8f4f8; padding: 15px; border-radius: 8px; 
-            color: #0c5460 !important; font-size: 14px; font-weight: 500; 
-            border: 1px solid #bee5eb; margin-top: 10px; 
-        }
-
-        /* Đồng hồ đếm ngược */
-        .timer-box { 
-            font-family: 'Courier New', monospace; font-size: 24px; 
-            font-weight: bold; color: white !important; 
-            background: linear-gradient(135deg, #e63946, #d62828); 
-            padding: 5px 20px; border-radius: 20px; width: fit-content; 
-            margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); 
-        }
-
-        /* Nút bấm (Buttons) */
-        .stButton button { 
-            background: linear-gradient(135deg, #134074, #0b2545) !important; 
-            border: none !important; border-radius: 6px !important; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; 
-            transition: all 0.2s ease-in-out !important; 
-        }
-        .stButton button p {
-            color: white !important; font-weight: 600 !important; font-size: 14px !important;
-        }
-        .stButton button:hover { 
-            transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; 
-        }
-        
-        /* Nút phụ (Thoát, Dừng thi) - Style Outline đỏ */
-        div[data-testid="column"] button:has(div:contains("THOÁT")), 
-        button:has(div:contains("DỪNG LÀM BÀI")) { 
-             background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; 
-        }
-        div[data-testid="column"] button:has(div:contains("THOÁT")) p, 
-        button:has(div:contains("DỪNG LÀM BÀI")) p {
-             color: #e63946 !important;
-        }
-        div[data-testid="column"] button:has(div:contains("THOÁT")):hover, 
-        button:has(div:contains("DỪNG LÀM BÀI")):hover { 
-             background: #e63946 !important; 
-        }
-        div[data-testid="column"] button:has(div:contains("THOÁT")):hover p, 
-        button:has(div:contains("DỪNG LÀM BÀI")):hover p {
-             color: white !important;
-        }
-
-        /* Ẩn Header/Footer */
+        .stMarkdown, .stText, p, h1, h2, h3, label { color: #112d4e !important; }
+        .gcpd-title { color: #0b2545 !important; font-size: 26px; font-weight: 900; text-align: center; text-transform: uppercase; margin-bottom: 0px; letter-spacing: 1.5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .user-info { background: linear-gradient(135deg, #0b2545, #134074); color: white !important; padding: 6px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; margin-top: 10px; }
+        div[data-baseweb="tab-list"] { position: sticky; top: 0; z-index: 999; background-color: #ffffff; padding-top: 15px; border-bottom: 2px solid #e0e0e0; gap: 8px; }
+        .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; }
+        .stTabs [aria-selected="true"] { background-color: #f8f9fa !important; color: #0b2545 !important; border-top: 3px solid #134074 !important; border-left: 1px solid #e0e0e0 !important; border-right: 1px solid #e0e0e0 !important; }
+        .question-box { background: #f8f9fa; padding: 20px; border-left: 5px solid #134074; border-radius: 8px; font-weight: 600; color: #112d4e !important; margin-bottom: 15px; font-size: 16px; line-height: 1.6; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
+        .stRadio div[role="radiogroup"] label p { color: #2c3e50 !important; font-weight: 500; font-size: 15px; }
+        .explain-box { background: #e8f4f8; padding: 15px; border-radius: 8px; color: #0c5460 !important; font-size: 14px; font-weight: 500; border: 1px solid #bee5eb; margin-top: 10px; }
+        .timer-box { font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: white !important; background: linear-gradient(135deg, #e63946, #d62828); padding: 5px 20px; border-radius: 20px; width: fit-content; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); }
+        .stButton button { background: linear-gradient(135deg, #134074, #0b2545) !important; border: none !important; border-radius: 6px !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; transition: all 0.2s ease-in-out !important; }
+        .stButton button p { color: white !important; font-weight: 600 !important; font-size: 14px !important; }
+        .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; }
+        div[data-testid="column"] button:has(div:contains("THOÁT")), button:has(div:contains("DỪNG LÀM BÀI")) { background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; }
+        div[data-testid="column"] button:has(div:contains("THOÁT")) p, button:has(div:contains("DỪNG LÀM BÀI")) p { color: #e63946 !important; }
+        div[data-testid="column"] button:has(div:contains("THOÁT")):hover, button:has(div:contains("DỪNG LÀM BÀI")):hover { background: #e63946 !important; }
+        div[data-testid="column"] button:has(div:contains("THOÁT")):hover p, button:has(div:contains("DỪNG LÀM BÀI")):hover p { color: white !important; }
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
+
 
 # --- 4. KẾT NỐI DATABASE ---
 @st.cache_resource
@@ -223,8 +216,6 @@ def render_mixed_content(content):
 
 # --- 6. MAIN ---
 def main():
-    inject_css()
-    
     if 'vai_tro' not in st.session_state: st.session_state.vai_tro = None
     if 'bat_dau' not in st.session_state: st.session_state.bat_dau = False
     if 'diem_so' not in st.session_state: st.session_state.diem_so = 0
@@ -239,26 +230,44 @@ def main():
         st.error("Không thể kết nối Database. Vui lòng kiểm tra lại.")
         st.stop()
 
-    # --- A. LOGIN ---
+    # ==========================================
+    # --- A. GIAO DIỆN LOGIN Y HỆT ẢNH MẪU ---
+    # ==========================================
     if st.session_state.vai_tro is None:
-        c1, c2 = st.columns([1, 2.5])
-        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_container_width=True)
-        with c2: st.markdown('<div class="gcpd-title">FTO GACHA CITY <BR> POLICE DERPARTMENT</div>', unsafe_allow_html=True)
+        inject_login_css()
         
-        with st.form("login"):
-            u = st.text_input("SỐ HIỆU (Momo)")
-            p = st.text_input("MÃ BẢO MẬT", type="password")
-            if st.form_submit_button("ĐĂNG NHẬP"):
+        with st.form("login_form"):
+            # Header Xanh Navy
+            st.markdown("""
+                <div class="login-header">
+                    <div class="gcpd-logo">GCPD</div>
+                    <div class="gcpd-title">FTO GACHA CITY<br>POLICE DEPARTMENT</div>
+                    <div class="gcpd-subtitle">TRAINING & ASSESSMENT</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Form nhập liệu
+            u = st.text_input("SỐ HIỆU", placeholder="Nhập số hiệu của bạn...")
+            p = st.text_input("MÃ BẢO MẬT", type="password", placeholder="••••••••")
+            
+            submit = st.form_submit_button("ĐĂNG NHẬP")
+            if submit:
                 role, name, stt = check_login(db, u, p)
                 if role:
                     st.session_state.vai_tro = role
                     st.session_state.user = u
                     st.session_state.ho_ten = name
                     st.rerun()
-                else: st.error("Sai thông tin!")
+                else: 
+                    st.error("SỐ HIỆU HOẶC MÃ BẢO MẬT KHÔNG CHÍNH XÁC!")
 
-    # --- B. DASHBOARD ---
+
+    # ==========================================
+    # --- B. DASHBOARD SAU KHI ĐĂNG NHẬP ---
+    # ==========================================
     else:
+        inject_dashboard_css()
+        
         c1, c2, c3 = st.columns([1, 4, 1], gap="small")
         with c1: 
             st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", width=40)
@@ -358,7 +367,6 @@ def main():
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
                     
-                    # --- LƯU TIẾN TRÌNH THI VÀO SHEETS ---
                     if st.session_state.get('mode') == 'that':
                         try:
                             ws = db.worksheet("HocVien")
