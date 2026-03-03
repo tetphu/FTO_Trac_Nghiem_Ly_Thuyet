@@ -21,68 +21,110 @@ except ImportError:
 
 THOI_GIAN_THI = 25
 
-# --- 3. CSS GIAO DIỆN ---
+# --- 3. CSS GIAO DIỆN CHUYÊN NGHIỆP ---
 def inject_css():
     st.markdown("""
         <style>
+        /* Tổng thể nền và layout */
+        .stApp {
+            background-color: #f4f7f6;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
         .block-container {
-            padding-top: 5rem !important;
-            padding-bottom: 3rem !important;
+            padding-top: 3rem !important;
+            padding-bottom: 4rem !important;
             max-width: 900px;
         }
+
+        /* Banner & Tiêu đề chính */
         .gcpd-title {
-            color: #002147; font-size: 22px; font-weight: 900; 
+            color: #0b2545; font-size: 26px; font-weight: 900; 
             text-align: center; text-transform: uppercase; 
-            margin-bottom: 5px; letter-spacing: 1px;
-        }
-        .user-info {
-            background-color: #f1f3f4; color: #002147;
-            padding: 4px 12px; border-radius: 20px;
-            font-size: 13px; font-weight: 700; text-align: center;
-            border: 1px solid #dadce0; display: inline-block;
+            margin-bottom: 0px; letter-spacing: 1.5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
         
-        /* STICKY TABS */
+        /* Huy hiệu User */
+        .user-info {
+            background: linear-gradient(135deg, #0b2545, #134074);
+            color: white; padding: 6px 18px; border-radius: 30px;
+            font-size: 13px; font-weight: 600; text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: inline-block; margin-top: 10px;
+        }
+        
+        /* Tabs (Menu chuyển tab) */
         div[data-baseweb="tab-list"] {
-            position: sticky; top: 3rem; z-index: 999;
-            background-color: white; padding-top: 10px;
-            border-bottom: 1px solid #eee; gap: 4px;
+            position: sticky; top: 0; z-index: 999;
+            background-color: #f4f7f6; padding-top: 15px;
+            border-bottom: 2px solid #e0e0e0; gap: 8px;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 35px; padding: 0 12px;
-            background-color: #fff; border-radius: 6px 6px 0 0;
-            color: #555; font-size: 12px; font-weight: 700;
-            border: 1px solid #eee; border-bottom: none;
+            height: 40px; padding: 0 20px;
+            background-color: transparent; border-radius: 8px 8px 0 0;
+            color: #7f8c8d; font-size: 14px; font-weight: 700;
+            border: none; transition: all 0.3s ease;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #002147 !important; color: #FFD700 !important;
-            border-top: 2px solid #FFD700 !important;
+            background-color: white !important; color: #0b2545 !important;
+            border-top: 3px solid #134074 !important;
+            border-left: 1px solid #e0e0e0 !important;
+            border-right: 1px solid #e0e0e0 !important;
+            box-shadow: 0 -3px 6px rgba(0,0,0,0.03);
         }
 
+        /* Khối Câu Hỏi (Card) */
         .question-box {
-            background: #fff; padding: 15px; 
-            border-left: 3px solid #002147;
-            border-radius: 4px; font-weight: 600; color: #333; 
-            margin-bottom: 10px; font-size: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #ffffff; padding: 20px; 
+            border-left: 5px solid #134074; border-radius: 8px; 
+            font-weight: 600; color: #2c3e50; 
+            margin-bottom: 15px; font-size: 16px; line-height: 1.6;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
         }
-        .timer-box {
-            font-family: monospace; font-size: 28px; font-weight: bold; color: #d32f2f;
-            text-align: center; background: #fff; border: 2px solid #ffcdd2;
-            border-radius: 8px; width: 80px; margin: 0 auto 10px auto;
-        }
-        .stButton button {
-            background: #002147 !important; color: #FFD700 !important;
-            font-weight: 700 !important; font-size: 13px !important;
-            padding: 0.4rem 1rem !important; border-radius: 4px !important;
-            border: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
-        }
-        .stButton button:hover { transform: translateY(-1px); }
         
-        div[data-testid="column"] button[key="logout"], button[key="stop_exam"] {
-             background: white !important; color: #d32f2f !important;
-             border: 1px solid #d32f2f !important; box-shadow: none !important;
+        /* Khối Giải Thích Đáp Án */
+        .explain-box {
+            background: #e8f4f8; padding: 15px; border-radius: 8px;
+            color: #0c5460; font-size: 14px; font-weight: 500;
+            border: 1px solid #bee5eb; margin-top: 10px;
         }
+
+        /* Đồng hồ đếm ngược */
+        .timer-box {
+            font-family: 'Courier New', monospace; font-size: 24px; 
+            font-weight: bold; color: white;
+            background: linear-gradient(135deg, #e63946, #d62828);
+            padding: 5px 20px; border-radius: 20px; width: fit-content; 
+            margin: 0 auto 15px auto;
+            box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3);
+        }
+
+        /* Nút bấm (Buttons) */
+        .stButton button {
+            background: linear-gradient(135deg, #134074, #0b2545) !important;
+            color: white !important; font-weight: 600 !important; 
+            font-size: 14px !important; padding: 0.5rem 1.2rem !important; 
+            border-radius: 6px !important; border: none !important; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        .stButton button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; 
+        }
+        
+        /* Nút phụ (Thoát, Dừng thi) - Style Outline đỏ */
+        div[data-testid="column"] button:has(div:contains("THOÁT")), 
+        button:has(div:contains("DỪNG LÀM BÀI")) {
+             background: transparent !important; color: #e63946 !important;
+             border: 2px solid #e63946 !important; box-shadow: none !important;
+        }
+        div[data-testid="column"] button:has(div:contains("THOÁT")):hover, 
+        button:has(div:contains("DỪNG LÀM BÀI")):hover {
+             background: #e63946 !important; color: white !important;
+        }
+
+        /* Ẩn Header/Footer rác của Streamlit */
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
@@ -176,7 +218,7 @@ def main():
     # --- A. LOGIN ---
     if st.session_state.vai_tro is None:
         c1, c2 = st.columns([1, 2.5])
-        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_column_width=True)
+        with c1: st.image("https://github.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/blob/main/GCPD%20(2).png?raw=true", use_container_width=True)
         with c2: st.markdown('<div class="gcpd-title">FTO GACHA CITY <BR> POLICE DERPARTMENT</div>', unsafe_allow_html=True)
         
         with st.form("login"):
