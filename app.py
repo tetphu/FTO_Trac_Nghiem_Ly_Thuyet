@@ -23,7 +23,7 @@ except ImportError:
 THOI_GIAN_THI = 25
 GIOI_HAN_THI_NGAY = 3 # Tối đa 3 lần thi chính thức / ngày
 
-# --- 3. CSS GIAO DIỆN ---
+# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
 def inject_login_css():
     st.markdown("""
         <style>
@@ -46,6 +46,7 @@ def inject_login_css():
         </style>
     """, unsafe_allow_html=True)
 
+# --- 3.1 CSS GIAO DIỆN QUẢN LÝ / THI CỬ (DASHBOARD) ---
 def inject_dashboard_css():
     st.markdown("""
         <style>
@@ -90,7 +91,6 @@ def ket_noi_csdl():
     except Exception as e:
         return None
 
-# MỚI: Cache dữ liệu học viên để tránh lỗi 429 khi đổi câu hỏi
 @st.cache_data(ttl=60)
 def get_all_hocvien(_db):
     try: return _db.worksheet("HocVien").get_all_values()
@@ -109,7 +109,7 @@ def get_giao_trinh(_db):
 # --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
-        rows = get_all_hocvien(db) # Sử dụng cache
+        rows = get_all_hocvien(db) 
         for r in rows[1:]:
             if len(r) < 3: continue
             if str(r[0]).strip() == str(u).strip() and str(r[1]).strip() == str(p).strip():
@@ -154,6 +154,7 @@ def main():
     if 'da_nop' not in st.session_state: st.session_state.da_nop = False
     if 'time_end' not in st.session_state: st.session_state.time_end = None
     if 'choice' not in st.session_state: st.session_state.choice = None
+    if 'da_luu_ket_qua' not in st.session_state: st.session_state.da_luu_ket_qua = False # MỚI: Cờ kiểm soát việc lưu tự động
 
     db = ket_noi_csdl()
     if not db: 
@@ -196,7 +197,6 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        # Đọc dữ liệu từ Cache (Rất nhanh và an toàn)
         all_hv_vals = get_all_hocvien(db)
         user_row_idx = None
         user_row_data = []
@@ -229,7 +229,7 @@ def main():
             try:
                 ws_hocvien = db.worksheet("HocVien")
                 ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                st.cache_data.clear() # Cập nhật cache
+                st.cache_data.clear() 
                 stt = "DaThi" 
                 st.error("🚨 HỆ THỐNG PHÁT HIỆN BẠN ĐÃ TẢI LẠI TRANG (F5) HOẶC THOÁT RA ĐỘT NGỘT!")
                 st.warning("Bài thi đã tự động nộp với điểm số 0 và bạn đã bị tính mất 1 lượt thi.")
@@ -285,6 +285,7 @@ def main():
                 if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
+                    st.session_state.da_luu_ket_qua = False
                     st.rerun()
             else:
                 st.error("🚨 THI CHÍNH THỨC (CẤM TẢI LẠI TRANG)")
@@ -293,17 +294,32 @@ def main():
                         ws_hocvien = db.worksheet("HocVien")
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                         ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
-                        st.cache_data.clear() # Xóa bộ nhớ đệm
+                        st.cache_data.clear() 
                     except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
+                    st.session_state.da_luu_ket_qua = False
                     st.rerun()
 
             qs = st.session_state.ds_cau_hoi
             idx = st.session_state.chi_so
             
-            # --- KHI HOÀN THÀNH BÀI THI ---
+            # ==========================================
+            # --- KHI HOÀN THÀNH BÀI THI (TỰ ĐỘNG CHỐT) ---
+            # ==========================================
             if idx >= len(qs):
+                # 1. Tự động lưu lên hệ thống đúng 1 lần duy nhất
+                if not st.session_state.get('da_luu_ket_qua', False):
+                    if st.session_state.get('mode') == 'that':
+                        try:
+                            ws_hocvien = db.worksheet("HocVien")
+                            ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
+                            ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
+                            st.cache_data.clear() 
+                        except: pass
+                    st.session_state.da_luu_ket_qua = True
+
+                # 2. Hiển thị điểm số ngay lập tức
                 if st.session_state.get('mode') == 'that':
                     if st.session_state.diem_so >= 45:
                         st.balloons()
@@ -316,19 +332,15 @@ def main():
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
 
-                if st.button("NỘP BÀI THI"):
-                    if st.session_state.get('mode') == 'that':
-                        try:
-                            ws_hocvien = db.worksheet("HocVien")
-                            ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                            ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
-                            st.cache_data.clear() 
-                        except: pass
+                # 3. Nút thoát khỏi kỳ thi
+                if st.button("🏠 QUAY VỀ BẢNG ĐIỀU KHIỂN"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
+                    st.session_state.da_luu_ket_qua = False
                     st.rerun()
                 st.stop()
 
+            # --- RENDER CÂU HỎI HIỆN TẠI ---
             q = qs[idx]
             while len(q)<7: q.append("")
             
@@ -361,7 +373,6 @@ def main():
                 if st.button("TIẾP THEO ➡️"):
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
-                    
                     st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
 
         else:
@@ -437,6 +448,7 @@ def main():
                                 qs = random.sample(all_qs, min(30, len(all_qs)))
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
+                            st.session_state.da_luu_ket_qua = False
                             st.rerun()
                     with c2:
                         if st.button("🚨 BẮT ĐẦU THI CHÍNH THỨC"):
@@ -469,6 +481,7 @@ def main():
                                         st.session_state.chi_so = 0
                                         st.session_state.diem_so = 0
                                         st.session_state.mode = 'that'
+                                        st.session_state.da_luu_ket_qua = False
                                         st.rerun()
                                     else: st.error("Ngân hàng câu hỏi đang trống!")
                                 else:
