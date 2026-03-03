@@ -220,12 +220,14 @@ def main():
         if stt == "Khoa": remaining = 0
 
         # --- BẪY LỖI: KIỂM TRA NẾU VỪA F5 TRONG LÚC ĐANG THI CHÍNH THỨC ---
+        # Khi web mới load lại (bat_dau = False) mà sheet vẫn đang ghi là DangThi
         if stt == "DangThi" and not st.session_state.bat_dau:
             try:
+                # Ép nộp bài ngay lập tức (Điểm đã được ghi = 0 lúc bắt đầu thi)
                 ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                stt = "DaThi" # Cập nhật biến hiện tại
+                stt = "DaThi" # Cập nhật trạng thái hiển thị
                 st.error("🚨 HỆ THỐNG PHÁT HIỆN BẠN ĐÃ TẢI LẠI TRANG (F5) HOẶC THOÁT RA ĐỘT NGỘT!")
-                st.warning("Bài thi đã bị nộp tự động với điểm số hiện tại và bạn đã bị tính mất 1 lượt thi.")
+                st.warning("Bài thi đã tự động nộp với điểm số 0 và bạn đã bị tính mất 1 lượt thi.")
             except: pass
 
 
@@ -311,6 +313,7 @@ def main():
                 if st.button("NỘP BÀI THI"):
                     if st.session_state.get('mode') == 'that':
                         try:
+                            # Chốt điểm cuối cùng lên Google Sheets
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         except: pass
@@ -352,12 +355,8 @@ def main():
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
                     
-                    if st.session_state.get('mode') == 'that':
-                        # CHỈ CẬP NHẬT ĐIỂM SỐ LÊN GOOGLE SHEET MỖI 5 CÂU ĐỂ TIẾT KIỆM API VÀ TRÁNH LỖI 429
-                        # (Nếu F5 giữa chừng, điểm sẽ được chốt ở mốc 5 câu gần nhất)
-                        if st.session_state.chi_so % 5 == 0 or st.session_state.chi_so == len(qs):
-                            try: ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
-                            except: pass
+                    # CẮT BỎ HOÀN TOÀN PHẦN CẬP NHẬT SHEET TRUNG GIAN Ở ĐÂY
+                    # Dữ liệu thi chỉ nằm trên RAM của Streamlit
 
                     st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
 
@@ -383,7 +382,7 @@ def main():
                             "SoLanThiThu": st.column_config.NumberColumn("Thi thử"),
                             "SoLanThiThat": st.column_config.NumberColumn("Thi thật"),
                             "NgayThi_SoLan": st.column_config.TextColumn("Lượt thi/ngày (Ẩn)", disabled=True),
-                            "TienTrinh_Cu": st.column_config.TextColumn("Không sử dụng (Ẩn)", disabled=True)
+                            "TienTrinh_Cu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
                         }
                     )
                     if st.button("LƯU THAY ĐỔI", type="primary"):
@@ -443,16 +442,15 @@ def main():
                                     st.error(f"⛔ Hôm nay bạn đã hết lượt thi (Tối đa {GIOI_HAN_THI_NGAY} lần/ngày). Vui lòng quay lại vào ngày mai!")
                                 elif stt == "Khoa":
                                     st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
-                                elif stt in ["DuocThi", "DaThi", "DangThi"]:
+                                elif stt in ["DuocThi", "DaThi"]:
                                     if len(all_qs) > 0: 
-                                        selected_indices = random.sample(range(len(all_qs)), min(50, len(all_qs)))
-                                        qs = [all_qs[i] for i in selected_indices]
+                                        qs = random.sample(all_qs, min(50, len(all_qs)))
                                         
                                         daily_count += 1
                                         lan_that += 1
                                         new_ngay_solan = f"{today_str}|{daily_count}"
                                         
-                                        # BẮT ĐẦU THI: Lưu ngay lượt thi và ghi điểm = 0 phòng trường hợp F5
+                                        # BẮT ĐẦU THI: Đánh dấu đang thi, set điểm tạm = 0
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 6, "0") 
                                         ws_hocvien.update_cell(user_row_idx, 8, str(lan_that))   
