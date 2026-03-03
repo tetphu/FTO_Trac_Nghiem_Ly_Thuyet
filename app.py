@@ -238,7 +238,7 @@ def main():
                     <div style="display: flex; align-items: center;">
                         <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px;">GCPD</div>
                         <div>
-                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase;">GCPD DASHBOARD</div>
+                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase;">FTO GCPD - THÔNG TIN CHI TIẾT</div>
                             <div style="color: #fccc04; font-size: 13px; font-weight: 600;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
                         </div>
                     </div>
@@ -507,3 +507,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
