@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import datetime
 
 # --- 1. CẤU HÌNH TRANG ---
 st.set_page_config(
@@ -20,7 +21,8 @@ except ImportError:
     st.stop()
 
 THOI_GIAN_THI = 25
-GIOI_HAN_RELOAD = 3 # Giới hạn tối đa số lần F5 / tải lại trang
+GIOI_HAN_RELOAD = 3
+GIOI_HAN_THI_NGAY = 3 # Tối đa 3 lần thi chính thức / ngày
 
 # --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
 def inject_login_css():
@@ -54,23 +56,19 @@ def inject_dashboard_css():
         @media (max-width: 768px) { .block-container { padding: 1.5rem 1rem !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; border: 2px solid #112d4e !important; border-radius: 10px !important; } }
         .stMarkdown, .stText, p, h1, h2, h3, label { color: #112d4e !important; }
         
-        /* Chỉnh Tabs */
         div[data-baseweb="tab-list"] { position: sticky; top: 0; z-index: 999; background-color: #ffffff; padding-top: 15px; border-bottom: 2px solid #e0e0e0; gap: 8px; }
         .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; }
         .stTabs [aria-selected="true"] { background-color: #f8f9fa !important; color: #0b2545 !important; border-top: 3px solid #134074 !important; border-left: 1px solid #e0e0e0 !important; border-right: 1px solid #e0e0e0 !important; }
         
-        /* Hộp câu hỏi */
         .question-box { background: #f8f9fa; padding: 20px; border-left: 5px solid #134074; border-radius: 8px; font-weight: 600; color: #112d4e !important; margin-bottom: 15px; font-size: 16px; line-height: 1.6; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
         .stRadio div[role="radiogroup"] label p { color: #2c3e50 !important; font-weight: 500; font-size: 15px; }
         .explain-box { background: #e8f4f8; padding: 15px; border-radius: 8px; color: #0c5460 !important; font-size: 14px; font-weight: 500; border: 1px solid #bee5eb; margin-top: 10px; }
         .timer-box { font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: white !important; background: linear-gradient(135deg, #e63946, #d62828); padding: 5px 20px; border-radius: 20px; width: fit-content; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3); }
         
-        /* Buttons */
         .stButton button { background: linear-gradient(135deg, #134074, #0b2545) !important; border: none !important; border-radius: 6px !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; transition: all 0.2s ease-in-out !important; }
         .stButton button p { color: white !important; font-weight: 600 !important; font-size: 14px !important; }
         .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; }
         
-        /* Nút phụ (Đăng xuất, Dừng thi) */
         div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")), button:has(div:contains("DỪNG LÀM BÀI")) { background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; }
         div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")) p, button:has(div:contains("DỪNG LÀM BÀI")) p { color: #e63946 !important; }
         div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")):hover, button:has(div:contains("DỪNG LÀM BÀI")):hover { background: #e63946 !important; }
@@ -188,14 +186,13 @@ def main():
                 else: 
                     st.error("SỐ HIỆU HOẶC MÃ BẢO MẬT KHÔNG CHÍNH XÁC!")
 
-
     # ==========================================
     # --- B. DASHBOARD SAU KHI ĐĂNG NHẬP ---
     # ==========================================
     else:
         inject_dashboard_css()
         
-        # --- HEADER DASHBOARD ĐỒNG BỘ MỚI ---
+        # --- HEADER DASHBOARD ---
         col1, col2 = st.columns([4, 1.5])
         with col1:
             st.markdown(f"""
@@ -208,7 +205,7 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
         with col2:
-            st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True) # Căn lề cho nút
+            st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             if st.button("🚪 ĐĂNG XUẤT", key="logout", use_container_width=True):
                 st.session_state.clear()
                 st.rerun()
@@ -250,7 +247,7 @@ def main():
                         st.success("🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
                     else:
                         st.error(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
-                        st.warning("❌ Bạn cần cố gắng ôn luyện thêm. Liên hệ Giảng viên để được cấp quyền thi lại.")
+                        st.warning("❌ Bạn đã rớt kỳ thi này. Bạn có thể làm lại bài nếu số lượt thi hôm nay chưa vượt quá 3 lần.")
                 else:
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
@@ -302,14 +299,12 @@ def main():
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
                     
-                    # --- LƯU TIẾN TRÌNH & SỐ LẦN RELOAD ---
                     if st.session_state.get('mode') == 'that':
                         try:
                             ws = db.worksheet("HocVien")
                             cell = ws.find(st.session_state.user)
                             idx_str = ','.join(map(str, st.session_state.selected_indices))
                             
-                            # Cấu trúc: chi_so | diem_so | idx_str | reload_count
                             new_tien_trinh = f"{st.session_state.chi_so}|{st.session_state.diem_so}|{idx_str}|{st.session_state.get('reload_count', 0)}"
                             ws.update_cell(cell.row, 7, new_tien_trinh)
                         except: pass
@@ -321,8 +316,10 @@ def main():
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
                     vals = db.worksheet("HocVien").get_all_values()
-                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","TienTrinh"]
-                    clean_data = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
+                    
+                    # 10 Cột Mới (Thêm Đếm Thi Thử, Thi Thật, Lượt Thi)
+                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","TienTrinh","SoLanThiThu","SoLanThiThat","NgayThi_SoLan"]
+                    clean_data = [r[:10]+[""]*(10-len(r)) for r in vals[1:]] if len(vals)>1 else []
                     full_df = pd.DataFrame(clean_data, columns=headers)
 
                     if role == 'Admin':
@@ -336,7 +333,10 @@ def main():
                             "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
                             "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
                             "Password": st.column_config.TextColumn("Mật Khẩu"),
-                            "TienTrinh": st.column_config.TextColumn("Tiến Trình (Ẩn)", disabled=True)
+                            "TienTrinh": st.column_config.TextColumn("Tiến Trình (Ẩn)", disabled=True),
+                            "NgayThi_SoLan": st.column_config.TextColumn("Lượt thi/ngày (Ẩn)", disabled=True),
+                            "SoLanThiThu": st.column_config.NumberColumn("Số lần Thi thử", disabled=True),
+                            "SoLanThiThat": st.column_config.NumberColumn("Số lần Thi thật", disabled=True)
                         }
                     )
                     if st.button("LƯU THAY ĐỔI", type="primary"):
@@ -376,6 +376,15 @@ def main():
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("📝 THI THỬ"):
+                            # LƯU ĐẾM SỐ LẦN THI THỬ
+                            try:
+                                ws = db.worksheet("HocVien")
+                                cell = ws.find(st.session_state.user)
+                                row_data = ws.row_values(cell.row)
+                                lan_thu = int(row_data[7]) if len(row_data) >= 8 and str(row_data[7]).strip().isdigit() else 0
+                                ws.update_cell(cell.row, 8, str(lan_thu + 1))
+                            except: pass
+                            
                             all_qs = get_exams(db)[1:] 
                             if len(all_qs)>0: 
                                 qs = random.sample(all_qs, min(30, len(all_qs)))
@@ -389,57 +398,40 @@ def main():
                                 cell = ws.find(st.session_state.user)
                                 row_data = ws.row_values(cell.row)
                                 
+                                # Gán các thông số từ Cột 5 đến 10
                                 stt = row_data[4] if len(row_data) >= 5 else "ChuaDuocThi"
+                                diem_cu = int(row_data[5]) if len(row_data) >= 6 and str(row_data[5]).strip().isdigit() else 0
                                 tien_trinh = row_data[6] if len(row_data) >= 7 else ""
+                                lan_that = int(row_data[8]) if len(row_data) >= 9 and str(row_data[8]).strip().isdigit() else 0
+                                ngay_solan = row_data[9] if len(row_data) >= 10 else ""
+                                
+                                # KIỂM TRA LƯỢT THI TRONG NGÀY
+                                today_str = datetime.date.today().strftime("%Y-%m-%d")
+                                daily_count = 0
+                                if ngay_solan:
+                                    parts = ngay_solan.split('|')
+                                    if len(parts) == 2 and parts[0] == today_str:
+                                        daily_count = int(parts[1])
                                 
                                 all_qs = get_exams(db)[1:]
 
-                                if stt == "DuocThi":
-                                    if len(all_qs) > 0: 
-                                        selected_indices = random.sample(range(len(all_qs)), min(50, len(all_qs)))
-                                        qs = [all_qs[i] for i in selected_indices]
-                                        
-                                        idx_str = ','.join(map(str, selected_indices))
-                                        
-                                        # Bắt đầu thi lần đầu -> reload_count = 0
-                                        st.session_state.reload_count = 0 
-                                        new_tien_trinh = f"0|0|{idx_str}|0"
-                                        
-                                        ws.update_cell(cell.row, 5, "DangThi")
-                                        ws.update_cell(cell.row, 7, new_tien_trinh)
-                                        
-                                        st.session_state.bat_dau = True
-                                        st.session_state.ds_cau_hoi = qs
-                                        st.session_state.chi_so = 0
-                                        st.session_state.diem_so = 0
-                                        st.session_state.mode = 'that'
-                                        st.session_state.selected_indices = selected_indices
-                                        st.rerun()
-                                    else:
-                                        st.error("Ngân hàng câu hỏi đang trống!")
-
-                                elif stt == "DangThi":
+                                if stt == "DangThi":
                                     if tien_trinh:
                                         parts = tien_trinh.split('|')
                                         if len(parts) >= 3:
                                             saved_chi_so = int(parts[0])
                                             saved_diem_so = int(parts[1])
                                             saved_indices = [int(x) for x in parts[2].split(',') if x.strip()]
-                                            
-                                            # Đọc số lần reload từ Sheet
                                             reload_count = int(parts[3]) if len(parts) >= 4 else 0
                                             
-                                            # KIỂM TRA GIỚI HẠN
                                             if reload_count >= GIOI_HAN_RELOAD:
                                                 st.error("⛔ BẠN ĐÃ VƯỢT QUÁ SỐ LẦN TẢI LẠI TRANG (TỐI ĐA 3 LẦN)!")
                                                 st.error("Hệ thống phát hiện dấu hiệu bất thường. Tài khoản đã bị KHÓA. Vui lòng liên hệ Giảng viên.")
-                                                try: ws.update_cell(cell.row, 5, "Khoa") # Khóa luôn user
+                                                try: ws.update_cell(cell.row, 5, "Khoa") 
                                                 except: pass
                                             else:
-                                                # Cho phép thi tiếp & cộng thêm 1 lần reload
                                                 reload_count += 1
                                                 st.session_state.reload_count = reload_count
-                                                
                                                 qs = [all_qs[i] for i in saved_indices if i < len(all_qs)]
                                                 
                                                 st.session_state.bat_dau = True
@@ -449,7 +441,6 @@ def main():
                                                 st.session_state.mode = 'that'
                                                 st.session_state.selected_indices = saved_indices
                                                 
-                                                # Cập nhật số lần reload mới lên sheet
                                                 new_tien_trinh = f"{saved_chi_so}|{saved_diem_so}|{parts[2]}|{reload_count}"
                                                 try: ws.update_cell(cell.row, 7, new_tien_trinh)
                                                 except: pass
@@ -457,10 +448,42 @@ def main():
                                                 st.warning(f"🔄 Đã khôi phục bài thi! (Bạn còn {GIOI_HAN_RELOAD - reload_count} lần tải lại trang)")
                                                 time.sleep(2.5)
                                                 st.rerun()
-                                        else:
-                                            st.error("Dữ liệu tiến trình bị lỗi. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                        else: st.error("Dữ liệu tiến trình bị lỗi. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                    else: st.error("Không tìm thấy tiến trình cũ. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                
+                                # XỬ LÝ NẾU ĐƯỢC THI HOẶC THI LẠI SAU KHI RỚT
+                                elif stt == "DuocThi" or stt == "DaThi":
+                                    if stt == "DaThi" and diem_cu >= 45:
+                                        st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
+                                    elif daily_count >= GIOI_HAN_THI_NGAY:
+                                        st.error(f"⛔ Hôm nay bạn đã hết lượt thi (Tối đa {GIOI_HAN_THI_NGAY} lần/ngày). Vui lòng ôn tập kỹ và quay lại vào ngày mai!")
                                     else:
-                                        st.error("Không tìm thấy tiến trình cũ. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                        if len(all_qs) > 0: 
+                                            selected_indices = random.sample(range(len(all_qs)), min(50, len(all_qs)))
+                                            qs = [all_qs[i] for i in selected_indices]
+                                            idx_str = ','.join(map(str, selected_indices))
+                                            
+                                            st.session_state.reload_count = 0 
+                                            new_tien_trinh = f"0|0|{idx_str}|0"
+                                            
+                                            daily_count += 1
+                                            lan_that += 1
+                                            new_ngay_solan = f"{today_str}|{daily_count}"
+                                            
+                                            # Cập nhật thông tin lên Sheet
+                                            ws.update_cell(cell.row, 5, "DangThi")
+                                            ws.update_cell(cell.row, 7, new_tien_trinh)
+                                            ws.update_cell(cell.row, 9, str(lan_that))
+                                            ws.update_cell(cell.row, 10, new_ngay_solan)
+                                            
+                                            st.session_state.bat_dau = True
+                                            st.session_state.ds_cau_hoi = qs
+                                            st.session_state.chi_so = 0
+                                            st.session_state.diem_so = 0
+                                            st.session_state.mode = 'that'
+                                            st.session_state.selected_indices = selected_indices
+                                            st.rerun()
+                                        else: st.error("Ngân hàng câu hỏi đang trống!")
                                 else:
                                     st.error(f"⛔ Bạn chưa được cấp quyền Thi lúc này! (Trạng thái: {stt})")
                             except Exception as e: 
