@@ -195,3 +195,194 @@ def main():
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
 
                 if st.button("NỘP BÀI THI"):
+                    if st.session_state.get('mode') == 'that':
+                        try:
+                            ws = db.worksheet("HocVien")
+                            cell = ws.find(st.session_state.user)
+                            ws.update_cell(cell.row, 5, "DaThi")
+                            ws.update_cell(cell.row, 6, str(st.session_state.diem_so))
+                            ws.update_cell(cell.row, 7, "") # Xóa tiến trình thi
+                        except: pass
+                    st.session_state.bat_dau = False
+                    st.session_state.ds_cau_hoi = []
+                    st.rerun()
+                st.stop()
+
+            q = qs[idx]
+            while len(q)<7: q.append("")
+            
+            if not st.session_state.da_nop:
+                if not st.session_state.time_end: st.session_state.time_end = time.time() + THOI_GIAN_THI
+                left = int(st.session_state.time_end - time.time())
+                if left <= 0: st.session_state.da_nop = True; st.session_state.choice = None; st.rerun()
+
+                st.markdown(f"<div class='timer-box'>⏳ {left}</div>", unsafe_allow_html=True)
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
+                
+                ans = st.radio("Chọn:", [f"A. {q[1]}", f"B. {q[2]}", f"C. {q[3]}", f"D. {q[4]}"], key=f"q_{idx}")
+                
+                st.write("")
+                if st.button("CHỐT ĐÁP ÁN"):
+                    st.session_state.choice = ans.split('.')[0] if ans else None
+                    st.session_state.da_nop = True; st.rerun()
+                time.sleep(1); st.rerun()
+            else:
+                st.markdown(f"**Câu {idx+1}/{len(qs)}:**")
+                st.markdown(f"<div class='question-box'>{q[0]}</div>", unsafe_allow_html=True)
+                res = st.session_state.choice
+                true = str(q[5]).strip().upper()
+                if res == true: st.success(f"✅ CHÍNH XÁC! ({res})")
+                else: st.error(f"❌ SAI! Chọn: {res} | Đúng: {true}")
+                if str(q[6]).strip(): st.markdown(f"<div class='explain-box'>💡 {q[6]}</div>", unsafe_allow_html=True)
+                st.write("")
+                
+                if st.button("TIẾP THEO ➡️"):
+                    if res == true: st.session_state.diem_so += 1
+                    st.session_state.chi_so += 1
+                    
+                    # --- LƯU TIẾN TRÌNH THI VÀO SHEETS ---
+                    if st.session_state.get('mode') == 'that':
+                        try:
+                            ws = db.worksheet("HocVien")
+                            cell = ws.find(st.session_state.user)
+                            idx_str = ','.join(map(str, st.session_state.selected_indices))
+                            new_tien_trinh = f"{st.session_state.chi_so}|{st.session_state.diem_so}|{idx_str}"
+                            ws.update_cell(cell.row, 7, new_tien_trinh)
+                        except: pass
+
+                    st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
+
+        else:
+            if active_tab in ["Admin", "GV"]:
+                with tabs[0]:
+                    st.subheader("✅ DANH SÁCH HỌC VIÊN")
+                    vals = db.worksheet("HocVien").get_all_values()
+                    # Bổ sung cột thứ 7 (TienTrinh) để không bị mất dữ liệu
+                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","TienTrinh"]
+                    clean_data = [r[:7]+[""]*(7-len(r)) for r in vals[1:]] if len(vals)>1 else []
+                    full_df = pd.DataFrame(clean_data, columns=headers)
+
+                    if role == 'Admin':
+                        view_df = full_df; role_ops = ["hocvien", "GiangVien", "Admin"]
+                    else:
+                        view_df = full_df[full_df['Role'] == 'hocvien']; role_ops = ["hocvien"]
+
+                    edited = st.data_editor(
+                        view_df, use_container_width=True, num_rows="dynamic", hide_index=True,
+                        column_config={
+                            "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
+                            "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
+                            "Password": st.column_config.TextColumn("Mật Khẩu"),
+                            "TienTrinh": st.column_config.TextColumn("Tiến Trình (Ẩn)", disabled=True)
+                        }
+                    )
+                    if st.button("LƯU THAY ĐỔI", type="primary"):
+                        final_df = edited if role == 'Admin' else pd.concat([full_df[full_df['Role'] != 'hocvien'], edited], ignore_index=True)
+                        if save_to_sheet(db, "HocVien", final_df): st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
+
+                with tabs[1]:
+                    st.subheader("⚙️ NGÂN HÀNG CÂU HỎI TRẮC NGHIỆM")
+                    q_vals = get_exams(db)
+                    q_headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
+                    q_data = [r[:7]+[""]*(7-len(r)) for r in q_vals[1:]] if len(q_vals)>1 else []
+                    q_df = pd.DataFrame(q_data, columns=q_headers)
+                    q_edit = st.data_editor(q_df, num_rows="dynamic", use_container_width=True)
+                    if st.button("LƯU CÂU HỎI"):
+                        if save_to_sheet(db, "CauHoi", q_edit): st.success("Đã lưu!"); time.sleep(1); st.rerun()
+
+                with tabs[2]:
+                    st.subheader("📚 TÀI LIỆU FTO GCPD")
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
+                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                                render_mixed_content(l.get('NoiDung',''))
+                    else: st.warning("Chưa có giáo trình.")
+
+            elif active_tab == "HV":
+                with tabs[0]: 
+                    st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
+                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                                render_mixed_content(l.get('NoiDung',''))
+                    else: st.warning("Chưa có dữ liệu.")
+
+                with tabs[1]:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("📝 THI THỬ"):
+                            all_qs = get_exams(db)[1:] 
+                            if len(all_qs)>0: 
+                                qs = random.sample(all_qs, min(30, len(all_qs)))
+                            st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
+                            st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
+                            st.rerun()
+                    with c2:
+                        if st.button("🚨 THI CHÍNH THỨC / TIẾP TỤC THI"):
+                            try:
+                                ws = db.worksheet("HocVien")
+                                cell = ws.find(st.session_state.user)
+                                row_data = ws.row_values(cell.row)
+                                
+                                stt = row_data[4] if len(row_data) >= 5 else "ChuaDuocThi"
+                                tien_trinh = row_data[6] if len(row_data) >= 7 else ""
+                                
+                                all_qs = get_exams(db)[1:]
+
+                                if stt == "DuocThi":
+                                    # MỚI BẮT ĐẦU THI
+                                    if len(all_qs) > 0: 
+                                        selected_indices = random.sample(range(len(all_qs)), min(50, len(all_qs)))
+                                        qs = [all_qs[i] for i in selected_indices]
+                                        
+                                        # Tạo chuỗi lưu: chi_so|diem_so|id_cau1,id_cau2...
+                                        idx_str = ','.join(map(str, selected_indices))
+                                        new_tien_trinh = f"0|0|{idx_str}"
+                                        
+                                        ws.update_cell(cell.row, 5, "DangThi")
+                                        ws.update_cell(cell.row, 7, new_tien_trinh)
+                                        
+                                        st.session_state.bat_dau = True
+                                        st.session_state.ds_cau_hoi = qs
+                                        st.session_state.chi_so = 0
+                                        st.session_state.diem_so = 0
+                                        st.session_state.mode = 'that'
+                                        st.session_state.selected_indices = selected_indices
+                                        st.rerun()
+                                    else:
+                                        st.error("Ngân hàng câu hỏi đang trống!")
+
+                                elif stt == "DangThi":
+                                    # KHÔI PHỤC TIẾN TRÌNH LÀM DỞ
+                                    if tien_trinh:
+                                        parts = tien_trinh.split('|')
+                                        if len(parts) == 3:
+                                            saved_chi_so = int(parts[0])
+                                            saved_diem_so = int(parts[1])
+                                            saved_indices = [int(x) for x in parts[2].split(',') if x.strip()]
+                                            
+                                            qs = [all_qs[i] for i in saved_indices if i < len(all_qs)]
+                                            
+                                            st.session_state.bat_dau = True
+                                            st.session_state.ds_cau_hoi = qs
+                                            st.session_state.chi_so = saved_chi_so
+                                            st.session_state.diem_so = saved_diem_so
+                                            st.session_state.mode = 'that'
+                                            st.session_state.selected_indices = saved_indices
+                                            st.success("🔄 Đã khôi phục bài thi bạn đang làm dở!")
+                                            time.sleep(1.5)
+                                            st.rerun()
+                                        else:
+                                            st.error("Dữ liệu tiến trình bị lỗi. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                    else:
+                                        st.error("Không tìm thấy tiến trình cũ. Báo Giảng viên đổi Trạng thái thành 'DuocThi' để thi lại.")
+                                else:
+                                    st.error(f"⛔ Bạn chưa được cấp quyền Thi lúc này! (Trạng thái: {stt})")
+                            except Exception as e: 
+                                st.error(f"Lỗi: {str(e)}")
+
+if __name__ == "__main__":
+    main()
