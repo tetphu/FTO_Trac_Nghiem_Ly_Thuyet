@@ -266,8 +266,8 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
             
-            u = st.text_input("SỐ MOMO", placeholder="Nhập số momo của bạn...")
-            p = st.text_input("MÃ BẢO MẬT ( Mặc định : 123 )", type="password", placeholder="••••••••")
+            u = st.text_input("SỐ MOMO", placeholder="Nhập số momo của Sĩ quan vào đây...")
+            p = st.text_input("MÃ BẢO MẬT ( Mặc định : 123 )", type="password", placeholder="nhập vào 123")
             
             submit = st.form_submit_button("ĐĂNG NHẬP")
             if submit:
@@ -578,6 +578,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
