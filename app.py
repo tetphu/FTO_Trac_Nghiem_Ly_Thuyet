@@ -260,14 +260,14 @@ def main():
         with st.form("login_form"):
             st.markdown("""
                 <div class="login-header">
-                    <div class="gcpd-logo">GCPD</div>
-                    <div class="gcpd-title">FTO GACHA CITY<br>POLICE DEPARTMENT</div>
-                    <div class="gcpd-subtitle">TRAINING & ASSESSMENT</div>
+                    <div class="gcpd-logo">FTO</div>
+                    <div class="gcpd-title">GACHA CITY<br>POLICE DEPARTMENT</div>
+                    <div class="gcpd-subtitle">HỌC VÀ THI TRẮC NGHIỆM DÀNH CHO HỌC VIÊN</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            u = st.text_input("SỐ HIỆU", placeholder="Nhập số hiệu của bạn...")
-            p = st.text_input("MÃ BẢO MẬT", type="password", placeholder="••••••••")
+            u = st.text_input("SỐ MOMO", placeholder="Nhập số momo của bạn...")
+            p = st.text_input("MÃ BẢO MẬT ( Mặc định : 123 )", type="password", placeholder="••••••••")
             
             submit = st.form_submit_button("ĐĂNG NHẬP")
             if submit:
@@ -378,8 +378,8 @@ def main():
                     st.session_state.da_luu_ket_qua = False
                     st.rerun()
             else:
-                st.error("🚨 THI CHÍNH THỨC (CẤM TẢI LẠI TRANG)")
-                if st.button("🏳️ KHÓ QUÁ BỎ KHÔNG THI NỮA", key="give_up_exam"):
+                st.error("🚨 THI CHÍNH THỨC (KHÔNG TẢI LẠI TRANG NẾU KHÔNG MUỐN BỊ 0 ĐIỂM)")
+                if st.button("🏳️ KHÓ QUÁ EM ĐẦU HÀNG", key="give_up_exam"):
                     try:
                         ws_hocvien = db.worksheet("HocVien")
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
@@ -412,10 +412,10 @@ def main():
                     if st.session_state.diem_so >= 45:
                         st.balloons()
                         st.success(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
-                        st.success("🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
+                        st.success("🎉 CHÚC MỪNG SĨ QUAN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
                     else:
                         st.error(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
-                        st.warning("❌ Bạn đã rớt kỳ thi này. Bạn có thể làm lại bài nếu số lượt thi hôm nay chưa vượt quá 3 lần.")
+                        st.warning("❌ Sĩ Quan đã rớt kỳ thi này. Sĩ Quan có thể làm lại bài nếu số lượt thi hôm nay chưa vượt quá 3 lần.")
                 else:
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
@@ -543,9 +543,9 @@ def main():
                                 all_qs = get_exams(db)[1:]
 
                                 if stt == "DaThi" and diem_cu >= 45:
-                                    st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
+                                    st.success("🎉 Sĩ Quan đã vượt qua kỳ thi này rồi, không cần thi lại nữa!")
                                 elif daily_count >= GIOI_HAN_THI_NGAY:
-                                    st.error(f"⛔ Hôm nay bạn đã hết lượt thi (Tối đa {GIOI_HAN_THI_NGAY} lần/ngày). Vui lòng quay lại vào ngày mai!")
+                                    st.error(f"⛔ Hôm nay Sĩ Quan đã hết lượt thi (Tối đa {GIOI_HAN_THI_NGAY} lần/ngày). Vui lòng quay lại vào ngày mai!")
                                 elif stt == "Khoa":
                                     st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
                                 elif stt in ["DuocThi", "DaThi"]:
@@ -572,9 +572,10 @@ def main():
                                         st.rerun()
                                     else: st.error("Ngân hàng câu hỏi đang trống!")
                                 else:
-                                    st.error(f"⛔ Bạn chưa được cấp quyền Thi lúc này! (Trạng thái: {stt})")
+                                    st.error(f"⛔ Sĩ Quan chưa được cấp quyền Thi lúc này! (Trạng thái: {stt}) Liên hệ GIẢNG VIÊN để được cấp quyền thi")
                             except Exception as e: 
                                 st.error(f"Lỗi: {str(e)}")
 
 if __name__ == "__main__":
     main()
+
