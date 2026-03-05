@@ -278,7 +278,7 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        # --- TỐI ƯU CỰC ĐỘ: LẤY DỮ LIỆU LIVE KHI ĐANG Ở NGOÀI BẢNG ĐIỀU KHIỂN ---
+        # --- LẤY DỮ LIỆU LIVE KHI ĐANG Ở NGOÀI BẢNG ĐIỀU KHIỂN ---
         if not st.session_state.bat_dau:
             ws_hocvien = db.worksheet("HocVien")
             all_hv_vals = ws_hocvien.get_all_values()
@@ -409,13 +409,14 @@ def main():
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            # CƠ CHẾ NẠP VÍ TỰ ĐỘNG KHI HOÀN THÀNH THI THỬ
-                            new_lan_thu = lan_thu + 1
-                            ws_hocvien.update_cell(user_row_idx, 7, str(new_lan_thu))
-                            if new_lan_thu % 5 == 0:
-                                new_luot_chinh_thuc = luot_chinh_thuc + 1
-                                ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
-                                st.info("🎉 Tích lũy đủ 5 lần thi thử! Hệ thống đã thưởng cho bạn 1 Lượt Thi Chính Thức!")
+                            # CƠ CHẾ CHỐNG SPAM: CHỈ CỘNG NẾU THI THỬ >= 10 ĐIỂM
+                            if st.session_state.diem_so >= 10:
+                                new_lan_thu = lan_thu + 1
+                                ws_hocvien.update_cell(user_row_idx, 7, str(new_lan_thu))
+                                if new_lan_thu % 5 == 0:
+                                    new_luot_chinh_thuc = luot_chinh_thuc + 1
+                                    ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
+                                    st.info("🎉 Tích lũy đủ 5 lần thi thử hợp lệ! Hệ thống đã thưởng cho bạn 1 Lượt Thi Chính Thức!")
                     except: pass
                     st.session_state.da_luu_ket_qua = True
 
@@ -430,7 +431,12 @@ def main():
                 else:
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
-                    st.success("💡 Bạn vừa hoàn thành 1 bài thi thử! Số lượt hoàn thành đã được lưu vào hệ thống.")
+                    
+                    # Hiện thông báo tương ứng với số điểm
+                    if st.session_state.diem_so >= 10:
+                        st.success("💡 Tuyệt vời! Điểm của bạn >= 10. Hệ thống đã cộng cho bạn 1 lượt hoàn thành thi thử hợp lệ.")
+                    else:
+                        st.warning("⚠️ Rất tiếc, bạn cần đạt tối thiểu 10/15 điểm để được tính là 1 lần hoàn thành thi thử hợp lệ. Hãy ôn tập kỹ hơn nhé!")
 
                 if st.button("🏠 QUAY VỀ BẢNG ĐIỀU KHIỂN"):
                     st.session_state.bat_dau = False
@@ -493,7 +499,7 @@ def main():
                             "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
                             "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
                             "Password": st.column_config.TextColumn("Mật Khẩu"),
-                            "SoLanThiThu": st.column_config.NumberColumn("Thi thử"),
+                            "SoLanThiThu": st.column_config.NumberColumn("Thi thử (>=10đ)"),
                             "SoLanThiThat": st.column_config.NumberColumn("Thi thật"),
                             "LuotThiChinhThuc": st.column_config.NumberColumn("Lượt thi hiện có"),
                             "DuLieuCu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
@@ -538,7 +544,7 @@ def main():
                         if st.button("📝 THI THỬ"):
                             all_qs = get_exams(db)[1:] 
                             if len(all_qs)>0: 
-                                qs = random.sample(all_qs, min(15, len(all_qs)))
+                                qs = random.sample(all_qs, min(15, len(all_qs))) # Thi thử 15 câu
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.session_state.da_luu_ket_qua = False
@@ -553,7 +559,7 @@ def main():
                                 elif stt == "Khoa":
                                     st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
                                 elif luot_chinh_thuc <= 0:
-                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử nữa hoặc nhờ Giảng viên cấp thêm lượt!")
+                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử (>=10 điểm) nữa hoặc nhờ Giảng viên cấp thêm lượt!")
                                 else:
                                     # CHỈ CẦN VÍ CÒN LƯỢT THÌ ĐƯỢC THI (Bỏ qua việc xét Trạng thái)
                                     if len(all_qs) > 0: 
@@ -581,7 +587,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
