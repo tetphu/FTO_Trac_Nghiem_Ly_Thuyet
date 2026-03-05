@@ -334,9 +334,9 @@ def main():
             st.markdown(f"""
                 <div style="background-color: #031c36; padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center;">
-                        <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px; font-family: Arial, sans-serif;">GCPD</div>
+                        <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px; font-family: Arial, sans-serif;">FTO</div>
                         <div>
-                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase; font-family: 'Montserrat', sans-serif;">GCPD DASHBOARD</div>
+                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase; font-family: 'Montserrat', sans-serif;">GCPD - THÔNG TIN</div>
                             <div style="color: #fccc04; font-size: 13px; font-weight: 700; font-family: 'Montserrat', sans-serif;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
                         </div>
                     </div>
@@ -567,5 +567,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
