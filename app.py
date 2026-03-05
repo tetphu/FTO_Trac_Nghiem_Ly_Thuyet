@@ -538,7 +538,7 @@ def main():
                         if st.button("📝 THI THỬ"):
                             all_qs = get_exams(db)[1:] 
                             if len(all_qs)>0: 
-                                qs = random.sample(all_qs, min(30, len(all_qs)))
+                                qs = random.sample(all_qs, min(15, len(all_qs)))
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.session_state.da_luu_ket_qua = False
@@ -581,3 +581,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
