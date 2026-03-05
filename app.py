@@ -1,6 +1,5 @@
 import streamlit as st
 import time
-import datetime
 
 # --- 1. CẤU HÌNH TRANG ---
 st.set_page_config(
@@ -301,7 +300,7 @@ def main():
         lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
         lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
         
-        # --- CƠ CHẾ MỚI: TÍNH TOÁN LƯỢT THI CHÍNH THỨC ---
+        # --- CƠ CHẾ MỚI: 5 LẦN THI THỬ = 1 LẦN THI CHÍNH THỨC ---
         earned_attempts = lan_thu // 5
         remaining = earned_attempts - lan_that
         if remaining < 0: remaining = 0
@@ -400,7 +399,7 @@ def main():
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            # CẬP NHẬT: Chốt 1 lần thi thử thành công
+                            # Chốt điểm cộng 1 lần thi thử thành công
                             ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1))
                         st.cache_data.clear() 
                     except: pass
@@ -482,8 +481,8 @@ def main():
                             "Password": st.column_config.TextColumn("Mật Khẩu"),
                             "SoLanThiThu": st.column_config.NumberColumn("Thi thử"),
                             "SoLanThiThat": st.column_config.NumberColumn("Thi thật"),
-                            "DuLieuCu1": st.column_config.TextColumn("Dữ Liệu Cũ 1 (Ẩn)", disabled=True),
-                            "DuLieuCu2": st.column_config.TextColumn("Dữ Liệu Cũ 2 (Ẩn)", disabled=True)
+                            "DuLieuCu1": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True),
+                            "DuLieuCu2": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
                         }
                     )
                     if st.button("LƯU THAY ĐỔI", type="primary"):
