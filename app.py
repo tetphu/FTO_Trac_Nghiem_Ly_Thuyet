@@ -343,7 +343,7 @@ def main():
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
                     <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">🏆 Điểm kỷ lục: <b style="color: #4ade80; font-size: 15px;">{diem_cu}/50</b></div>
-                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Đã thi thử: <b style="color: white;">{lan_thu}</b> lần (Cần {thi_thu_con_thieu} lần nữa)thêm lượt chính thức</div>
+                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Thi thử: <b style="color: white;">{lan_thu}</b> lần (Cần {thi_thu_con_thieu} lần thêm để lượt chính thức</div>
                     <div style="color: #e0e0e0; font-size: 12px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> </div>
                 </div>
                 """
@@ -673,4 +673,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
