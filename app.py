@@ -300,10 +300,10 @@ def main():
         lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
         lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
         
-        # --- CỘT 9: LƯỢT THI ĐƯỢC CẤP THÊM (CHỈNH SỬA THỦ CÔNG) ---
+        # --- CỘT 9: LƯỢT THI ĐƯỢC CẤP THÊM ---
         luot_thi_them = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
         
-        # --- CƠ CHẾ: 5 LẦN THI THỬ = 1 LẦN THI CHÍNH THỨC + LƯỢT CẤP THÊM TỪ ADMIN ---
+        # --- CƠ CHẾ: TÍNH TỔNG SỐ LƯỢT THI ---
         earned_attempts = (lan_thu // 5) + luot_thi_them
         remaining = earned_attempts - lan_that
         if remaining < 0: remaining = 0
@@ -526,7 +526,7 @@ def main():
                         if st.button("📝 THI THỬ"):
                             all_qs = get_exams(db)[1:] 
                             if len(all_qs)>0: 
-                                qs = random.sample(all_qs, min(20, len(all_qs)))
+                                qs = random.sample(all_qs, min(30, len(all_qs)))
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.session_state.da_luu_ket_qua = False
@@ -538,11 +538,12 @@ def main():
 
                                 if stt == "DaThi" and diem_cu >= 45:
                                     st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
-                                elif remaining <= 0:
-                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử nữa để nhận 1 lượt thi chính thức!")
                                 elif stt == "Khoa":
                                     st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
-                                elif stt in ["DuocThi", "DaThi"]:
+                                elif remaining <= 0:
+                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử nữa hoặc nhờ Giảng viên cấp thêm lượt!")
+                                else:
+                                    # CHỈ CẦN CÒN LƯỢT THÌ ĐƯỢC THI (Bỏ qua xét cột Trạng Thái)
                                     if len(all_qs) > 0: 
                                         qs = random.sample(all_qs, min(50, len(all_qs)))
                                         lan_that += 1
@@ -562,12 +563,8 @@ def main():
                                         st.session_state.da_luu_ket_qua = False
                                         st.rerun()
                                     else: st.error("Ngân hàng câu hỏi đang trống!")
-                                else:
-                                    st.error(f"⛔ Bạn chưa được cấp quyền Thi lúc này! (Trạng thái: {stt})")
                             except Exception as e: 
                                 st.error(f"Lỗi: {str(e)}")
 
 if __name__ == "__main__":
     main()
-
-
