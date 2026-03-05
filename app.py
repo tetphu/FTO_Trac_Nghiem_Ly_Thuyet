@@ -403,7 +403,7 @@ def main():
             if role == "hocvien":
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 8px; text-align: right; margin-left: auto; width: fit-content;">
-                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 2px; font-family: 'Montserrat', sans-serif;">🏆 Điểm Kỷ lục: <b style="color: #4ade80; font-size: 14px;">{diem_cu}/50</b> | Đã thi thử: <b style="color: white;">{lan_thu} lần</b></div>
+                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 2px; font-family: 'Montserrat', sans-serif;">🏆 Điểm cao nhất của Sĩ Quan: <b style="color: #4ade80; font-size: 14px;">{diem_cu}/50</b> | Đã thi thử: <b style="color: white;">{lan_thu} lần</b></div>
                     <div style="color: #e0e0e0; font-size: 12px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> ( {thi_thu_con_thieu} lần thi thử nữa sẽ thêm 1 lượt)</div>
                 </div>
                 """
@@ -710,6 +710,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
