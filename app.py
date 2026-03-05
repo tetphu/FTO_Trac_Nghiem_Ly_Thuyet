@@ -151,6 +151,44 @@ def inject_dashboard_css():
         .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif; }
         .stTabs [aria-selected="true"] { background-color: #f8f9fa !important; color: #0b2545 !important; border-top: 3px solid #134074 !important; border-left: 1px solid #e0e0e0 !important; border-right: 1px solid #e0e0e0 !important; }
         
+        /* THE BLUE BOX HEADER GOM NHÓM TẤT CẢ */
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) {
+            background-color: #031c36 !important;
+            padding: 10px 15px !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+            align-items: center !important;
+            margin-bottom: 20px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"] {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        /* Tùy chỉnh Nút Đăng Xuất bên trong Khung Xanh */
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) button {
+            background-color: transparent !important;
+            border: 1px solid #e63946 !important;
+            padding: 0px 5px !important;
+            min-height: 28px !important;
+            height: 28px !important;
+            border-radius: 6px !important;
+            margin-top: 5px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) button p {
+            color: #e63946 !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) button:hover {
+            background-color: #e63946 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) button:hover p {
+            color: white !important;
+        }
+        
         .question-box { background: #f8f9fa; padding: 20px; border-left: 5px solid #134074; border-radius: 8px; font-weight: 600; color: #112d4e !important; margin-bottom: 15px; font-size: 16px; line-height: 1.6; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
         .stRadio div[role="radiogroup"] label p { color: #2c3e50 !important; font-weight: 600; font-size: 15px; }
         .explain-box { background: #e8f4f8; padding: 15px; border-radius: 8px; color: #0c5460 !important; font-size: 14px; font-weight: 600; border: 1px solid #bee5eb; margin-top: 10px; }
@@ -160,10 +198,10 @@ def inject_dashboard_css():
         .stButton button p { color: white !important; font-weight: 700 !important; font-size: 14px !important; text-align: center; width: 100%;}
         .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; }
         
-        div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")), button:has(div:contains("DỪNG LÀM BÀI")), button:has(div:contains("BỎ KHÔNG THI NỮA")) { background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; }
-        div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")) p, button:has(div:contains("DỪNG LÀM BÀI")) p, button:has(div:contains("BỎ KHÔNG THI NỮA")) p { color: #e63946 !important; }
-        div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")):hover, button:has(div:contains("DỪNG LÀM BÀI")):hover, button:has(div:contains("BỎ KHÔNG THI NỮA")):hover { background: #e63946 !important; }
-        div[data-testid="column"] button:has(div:contains("ĐĂNG XUẤT")):hover p, button:has(div:contains("DỪNG LÀM BÀI")):hover p, button:has(div:contains("BỎ KHÔNG THI NỮA")):hover p { color: white !important; }
+        div[data-testid="column"] button:has(div:contains("DỪNG LÀM BÀI")), button:has(div:contains("BỎ KHÔNG THI NỮA")) { background: transparent !important; border: 2px solid #e63946 !important; box-shadow: none !important; }
+        div[data-testid="column"] button:has(div:contains("DỪNG LÀM BÀI")) p, button:has(div:contains("BỎ KHÔNG THI NỮA")) p { color: #e63946 !important; }
+        div[data-testid="column"] button:has(div:contains("DỪNG LÀM BÀI")):hover, button:has(div:contains("BỎ KHÔNG THI NỮA")):hover { background: #e63946 !important; }
+        div[data-testid="column"] button:has(div:contains("DỪNG LÀM BÀI")):hover p, button:has(div:contains("BỎ KHÔNG THI NỮA")):hover p { color: white !important; }
         
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
@@ -339,37 +377,38 @@ def main():
         if not st.session_state.bat_dau:
             st.image(BANNER_URL, use_container_width=True)
 
-        # --- HEADER DASHBOARD ---
-        col1, col2 = st.columns([4.2, 1.5])
+        # --- HEADER DASHBOARD THU GỌN VÀO 1 KHUNG ---
+        col1, col2, col3 = st.columns([3.3, 1.2, 4.5], gap="small")
+        
         with col1:
+            st.markdown(f"""
+                <div class="header-marker" style="display: flex; align-items: center;">
+                    <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 12px; font-family: Arial, sans-serif; flex-shrink: 0;">FTO</div>
+                    <div>
+                        <div style="color: white; font-weight: 800; font-size: 15px; margin-bottom: 2px; text-transform: uppercase; font-family: 'Montserrat', sans-serif; white-space: nowrap;">GCPD - THÔNG TIN</div>
+                        <div style="color: #fccc04; font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; white-space: nowrap;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with col2:
+            # Chèn nút đăng xuất ngay sau cột Tên
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+            if st.button("ĐĂNG XUẤT", key="logout", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
+                
+        with col3:
             stats_html = ""
             if role == "hocvien":
                 stats_html = f"""
-                <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
-                    <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">🏆 Điểm kỷ lục: <b style="color: #4ade80; font-size: 15px;">{diem_cu}/50</b></div>
-                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Đã thi thử: <b style="color: white;">{lan_thu}</b> lần (Cần {thi_thu_con_thieu} lần nữa)</div>
-                    <div style="color: #e0e0e0; font-size: 12px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> </div>
+                <div style="background-color: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 8px; text-align: right; margin-left: auto; width: fit-content;">
+                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 2px; font-family: 'Montserrat', sans-serif;">🏆 Kỷ lục: <b style="color: #4ade80; font-size: 14px;">{diem_cu}/50</b> | Đã thử: <b style="color: white;">{lan_thu}</b></div>
+                    <div style="color: #e0e0e0; font-size: 12px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> (Cần {thi_thu_con_thieu} thử nữa)</div>
                 </div>
                 """
-                
-            st.markdown(f"""
-                <div style="background-color: #031c36; padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center;">
-                        <div style="background-color: #fccc04; color: #031c36; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; margin-right: 15px; font-family: Arial, sans-serif;">FTO</div>
-                        <div>
-                            <div style="color: white; font-weight: 800; font-size: 16px; margin-bottom: 2px; text-transform: uppercase; font-family: 'Montserrat', sans-serif;">GCPD - THÔNG TIN</div>
-                            <div style="color: #fccc04; font-size: 13px; font-weight: 700; font-family: 'Montserrat', sans-serif;">👮 {st.session_state.ho_ten} | {role.upper()}</div>
-                        </div>
-                    </div>
-                    {stats_html}
-                </div>
-            """, unsafe_allow_html=True)
-        with col2:
-            st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
-            if st.button("🚪 ĐĂNG XUẤT", key="logout", use_container_width=True):
-                st.session_state.clear()
-                st.rerun()
-        
+            st.markdown(stats_html, unsafe_allow_html=True)
+            
         st.write("")
         
         # --- TAB MENU ---
@@ -503,7 +542,6 @@ def main():
                             time.sleep(1)
                             st.rerun()
 
-            # --- TAB HỌC VIÊN ---
             elif active_tab == "HV":
                 with tabs[1]: 
                     st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
@@ -546,6 +584,7 @@ def main():
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 8, str(new_lan_that))   
                                         ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))   
+                                        st.cache_data.clear() 
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
@@ -580,6 +619,7 @@ def main():
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                         if st.session_state.diem_so > diem_cu:
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
+                        st.cache_data.clear() 
                     except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -602,6 +642,7 @@ def main():
                                 if new_lan_thu % 5 == 0:
                                     new_luot_chinh_thuc = luot_chinh_thuc + 1
                                     ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
+                        st.cache_data.clear() 
                     except: pass
                     st.session_state.da_luu_ket_qua = True
 
