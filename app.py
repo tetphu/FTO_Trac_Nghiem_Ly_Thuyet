@@ -21,7 +21,7 @@ except ImportError:
 
 THOI_GIAN_THI = 25
 # LINK BANNER (BẠN THAY LINK ẢNH CỦA BẠN VÀO ĐÂY)
-BANNER_URL = "https://placehold.co/1200x300/031c36/fccc04?text=FTO+GCPD+TRAINING+%26+ASSESSMENT&font=Montserrat"
+BANNER_URL = "https://raw.githubusercontent.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/refs/heads/main/Anh/banner.png"
 
 # --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
 def inject_login_css():
@@ -710,4 +710,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
