@@ -440,9 +440,9 @@ def main():
                     st.markdown("---")
                     st.subheader("📌 QUY CHẾ THI FTO")
                     st.markdown("""
-                    - **Điều kiện thi chính thức:** Hoàn thành trọn vẹn 5 bài thi thử (đạt tối thiểu **10/15 điểm**) sẽ tự động nhận được **1 lượt** thi chính thức vào Ví.
-                    - **Bảo lưu Kỷ lục:** Điểm số cao nhất của bạn sẽ luôn được giữ lại. Các lần thi sau chỉ ghi đè nếu điểm cao hơn kỷ lục cũ.
-                    - **Chống gian lận (Luật F5):** Mọi hành vi tải lại trang (F5) hoặc đóng web giữa chừng trong lúc thi chính thức sẽ bị hủy bài thi và trừ 1 lượt thi.
+                    - **Điều kiện thi chính thức:** Hoàn thành trọn vẹn 5 bài thi thử (đạt tối thiểu **10/15 điểm**) sẽ tự động nhận được **1 lượt** thi chính thức.
+                    - Thi chính thức đạt 45/50 câu là vượt qua kì thi. 
+                    - Mọi hành vi tải lại trang (F5) hoặc đóng web giữa chừng trong lúc thi chính thức sẽ bị hủy bài thi và trừ 1 lượt thi.
                     """)
 
                 with col_xh:
@@ -710,5 +710,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
