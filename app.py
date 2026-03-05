@@ -166,7 +166,7 @@ def inject_dashboard_css():
     """, unsafe_allow_html=True)
 
 
-# --- 4. KẾT NỐI DATABASE & CACHE TỐI ƯU ---
+# --- 4. KẾT NỐI DATABASE ---
 @st.cache_resource
 def ket_noi_csdl():
     try:
@@ -179,17 +179,11 @@ def ket_noi_csdl():
     except Exception as e:
         return None
 
-@st.cache_data(ttl=60)
-def get_all_hocvien(_db):
-    try: return _db.worksheet("HocVien").get_all_values()
-    except: return []
-
-@st.cache_data(ttl=300) 
+# KHÔNG DÙNG CACHE CHO NGÂN HÀNG CÂU HỎI VÀ TÀI LIỆU NỮA, TRÁNH LỖI ĐỒNG BỘ
 def get_exams(_db):
     try: return _db.worksheet("CauHoi").get_all_values()
     except: return []
 
-@st.cache_data(ttl=300)
 def get_giao_trinh(_db):
     try: return _db.worksheet("GiaoTrinh").get_all_records()
     except: return []
@@ -197,7 +191,7 @@ def get_giao_trinh(_db):
 # --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
-        rows = get_all_hocvien(db) 
+        rows = db.worksheet("HocVien").get_all_values() 
         for r in rows[1:]:
             if len(r) < 3: continue
             if str(r[0]).strip() == str(u).strip() and str(r[1]).strip() == str(p).strip():
@@ -212,7 +206,6 @@ def save_to_sheet(db, sheet_name, df_to_save):
         ws.clear()
         data = [df_to_save.columns.tolist()] + df_to_save.values.tolist()
         ws.update(data)
-        st.cache_data.clear() 
         return True
     except Exception as e:
         st.error(f"Lỗi lưu: {e}")
@@ -285,45 +278,64 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        all_hv_vals = get_all_hocvien(db)
-        user_row_idx = None
-        user_row_data = []
-        for i, r in enumerate(all_hv_vals):
-            if len(r) > 0 and str(r[0]).strip() == st.session_state.user:
-                user_row_idx = i + 1
-                user_row_data = r
-                break
-        
-        while len(user_row_data) < 10: user_row_data.append("")
-        stt = user_row_data[4]
-        diem_cu = int(user_row_data[5]) if str(user_row_data[5]).strip().isdigit() else 0
-        lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
-        lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
-        
-        # --- CỘT 9: LƯỢT THI ĐƯỢC CẤP THÊM ---
-        luot_thi_them = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
-        
-        # --- CƠ CHẾ: TÍNH TỔNG SỐ LƯỢT THI ---
-        earned_attempts = (lan_thu // 5) + luot_thi_them
-        remaining = earned_attempts - lan_that
-        if remaining < 0: remaining = 0
-        thi_thu_con_thieu = 5 - (lan_thu % 5)
-        
-        if stt == "Khoa": remaining = 0
+        # --- TỐI ƯU CỰC ĐỘ: CHỈ GỌI API KHI KHÔNG Ở TRONG BÀI THI ---
+        if not st.session_state.bat_dau:
+            ws_hocvien = db.worksheet("HocVien")
+            all_hv_vals = ws_hocvien.get_all_values()
+            st.session_state.all_hv_vals_cache = all_hv_vals # Lưu tạm cho Admin thao tác
+            
+            user_row_idx = None
+            user_row_data = []
+            for i, r in enumerate(all_hv_vals):
+                if len(r) > 0 and str(r[0]).strip() == st.session_state.user:
+                    user_row_idx = i + 1
+                    user_row_data = r
+                    break
+            
+            st.session_state.user_row_idx = user_row_idx
+            
+            while len(user_row_data) < 10: user_row_data.append("")
+            
+            # Lưu lại trạng thái thời gian thực vào session
+            st.session_state.stt = user_row_data[4]
+            st.session_state.diem_cu = int(user_row_data[5]) if str(user_row_data[5]).strip().isdigit() else 0
+            st.session_state.lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
+            st.session_state.lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
+            st.session_state.luot_thi_them = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
+            
+            # Tính toán tự động số lượt thi còn lại THỜI GIAN THỰC
+            earned_attempts = (st.session_state.lan_thu // 5) + st.session_state.luot_thi_them
+            st.session_state.remaining = earned_attempts - st.session_state.lan_that
+            if st.session_state.remaining < 0: st.session_state.remaining = 0
+            st.session_state.thi_thu_con_thieu = 5 - (st.session_state.lan_thu % 5)
+            
+            if st.session_state.stt == "Khoa": st.session_state.remaining = 0
+            
+        else:
+            # KHI ĐANG TRONG PHÒNG THI -> Chặn đọc Google Sheet, chỉ lấy dữ liệu từ RAM
+            user_row_idx = st.session_state.get('user_row_idx')
+            all_hv_vals = st.session_state.get('all_hv_vals_cache', [])
+
+        # Biến gán ngắn gọn để dùng bên dưới
+        stt = st.session_state.get('stt', 'ChuaDuocThi')
+        diem_cu = st.session_state.get('diem_cu', 0)
+        lan_thu = st.session_state.get('lan_thu', 0)
+        lan_that = st.session_state.get('lan_that', 0)
+        remaining = st.session_state.get('remaining', 0)
+        thi_thu_con_thieu = st.session_state.get('thi_thu_con_thieu', 5)
 
         # --- BẪY LỖI: KIỂM TRA F5 HOẶC RỚT MẠNG ---
         if stt == "DangThi" and not st.session_state.bat_dau:
             try:
                 ws_hocvien = db.worksheet("HocVien")
                 ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                st.cache_data.clear() 
-                stt = "DaThi" 
+                st.session_state.stt = "DaThi" 
                 st.error("🚨 HỆ THỐNG PHÁT HIỆN BẠN ĐÃ TẢI LẠI TRANG (F5) HOẶC THOÁT RA ĐỘT NGỘT!")
                 st.warning("Bài thi đã tự động nộp với điểm số 0 và bạn đã bị tính mất 1 lượt thi.")
             except: pass
 
         # --- HEADER DASHBOARD ---
-        col1, col2 = st.columns([4.5, 1.2])
+        col1, col2 = st.columns([4.2, 1.5])
         with col1:
             stats_html = ""
             if role == "hocvien":
@@ -381,7 +393,6 @@ def main():
                         ws_hocvien = db.worksheet("HocVien")
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                         ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
-                        st.cache_data.clear() 
                     except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -403,7 +414,6 @@ def main():
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
                             ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1))
-                        st.cache_data.clear() 
                     except: pass
                     st.session_state.da_luu_ket_qua = True
 
@@ -543,7 +553,7 @@ def main():
                                 elif remaining <= 0:
                                     st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử nữa hoặc nhờ Giảng viên cấp thêm lượt!")
                                 else:
-                                    # CHỈ CẦN CÒN LƯỢT THÌ ĐƯỢC THI (Bỏ qua xét cột Trạng Thái)
+                                    # CHỈ CẦN CÒN LƯỢT THÌ ĐƯỢC THI
                                     if len(all_qs) > 0: 
                                         qs = random.sample(all_qs, min(50, len(all_qs)))
                                         lan_that += 1
@@ -553,7 +563,6 @@ def main():
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 6, "0") 
                                         ws_hocvien.update_cell(user_row_idx, 8, str(lan_that))   
-                                        st.cache_data.clear() 
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
@@ -568,4 +577,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
