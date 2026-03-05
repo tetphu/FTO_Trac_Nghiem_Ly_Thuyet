@@ -337,7 +337,7 @@ def main():
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
                     <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Sĩ quan đã thi thử: <b style="color: white;">{lan_thu}</b> lần<br>(Còn {thi_thu_con_thieu} lần nữa sẽ thêm 1 lần thi chính thức)</div>
-                    <div style="color: #e0e0e0; font-size: 13px; font-family: 'Montserrat', sans-serif;">Thi chính thứ còn: <b style="color: #fccc04;">{luot_chinh_thuc} lần</b> </div>
+                    <div style="color: #e0e0e0; font-size: 13px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lần</b> </div>
                 </div>
                 """
                 
@@ -581,6 +581,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
