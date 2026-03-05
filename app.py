@@ -20,8 +20,10 @@ except ImportError:
     st.stop()
 
 THOI_GIAN_THI = 25
+# LINK BANNER (BẠN THAY LINK ẢNH CỦA BẠN VÀO ĐÂY)
+BANNER_URL = "https://placehold.co/1200x300/031c36/fccc04?text=FTO+GCPD+TRAINING+%26+ASSESSMENT&font=Montserrat"
 
-# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP (CHUẨN THIẾT KẾ MỚI) ---
+# --- 3. CSS GIAO DIỆN ĐĂNG NHẬP ---
 def inject_login_css():
     st.markdown("""
         <style>
@@ -103,7 +105,6 @@ def inject_login_css():
         }
         .stTextInput input:focus { border-color: #031c36 !important; box-shadow: 0 0 0 1px #031c36 !important; }
         
-        /* Căn giữa nút đăng nhập và kéo dài 100% */
         [data-testid="stFormSubmitButton"] {
             padding: 10px 30px 35px 30px !important;
             display: flex !important;
@@ -143,6 +144,9 @@ def inject_dashboard_css():
         @media (max-width: 768px) { .block-container { padding: 1.5rem 1rem !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; border: 2px solid #112d4e !important; border-radius: 10px !important; } }
         .stMarkdown, .stText, p, h1, h2, h3, label { color: #112d4e !important; font-family: 'Montserrat', sans-serif !important; }
         
+        /* CSS CHỈNH BO GÓC CHO BANNER */
+        [data-testid="stImage"] img { border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important; margin-bottom: 5px !important; }
+        
         div[data-baseweb="tab-list"] { position: sticky; top: 0; z-index: 999; background-color: #ffffff; padding-top: 15px; border-bottom: 2px solid #e0e0e0; gap: 8px; }
         .stTabs [data-baseweb="tab"] { height: 40px; padding: 0 20px; background-color: transparent; border-radius: 8px 8px 0 0; color: #7f8c8d !important; font-size: 14px; font-weight: 700; border: none; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif; }
         .stTabs [aria-selected="true"] { background-color: #f8f9fa !important; color: #0b2545 !important; border-top: 3px solid #134074 !important; border-left: 1px solid #e0e0e0 !important; border-right: 1px solid #e0e0e0 !important; }
@@ -166,7 +170,7 @@ def inject_dashboard_css():
     """, unsafe_allow_html=True)
 
 
-# --- 4. KẾT NỐI DATABASE & CACHE TỐI ƯU ---
+# --- 4. KẾT NỐI DATABASE ---
 @st.cache_resource
 def ket_noi_csdl():
     try:
@@ -179,13 +183,10 @@ def ket_noi_csdl():
     except Exception as e:
         return None
 
-# CACHE ĐỌC THÔNG BÁO TỪ GOOGLE SHEET
 @st.cache_data(ttl=120)
 def get_thong_bao(_db):
-    try: 
-        return _db.worksheet("ThongBao").get_all_records()
-    except: 
-        return []
+    try: return _db.worksheet("ThongBao").get_all_records()
+    except: return []
 
 def get_exams(_db):
     try: return _db.worksheet("CauHoi").get_all_values()
@@ -286,7 +287,7 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        # --- LẤY DỮ LIỆU LIVE KHI ĐANG Ở NGOÀI BẢNG ĐIỀU KHIỂN ---
+        # --- LẤY DỮ LIỆU LIVE ---
         if not st.session_state.bat_dau:
             ws_hocvien = db.worksheet("HocVien")
             all_hv_vals = ws_hocvien.get_all_values()
@@ -314,7 +315,6 @@ def main():
             if st.session_state.stt == "Khoa": st.session_state.luot_chinh_thuc = 0
             
         else:
-            # Khi đang thi ngắt kết nối để mượt 100%
             user_row_idx = st.session_state.get('user_row_idx')
             all_hv_vals = st.session_state.get('all_hv_vals_cache', [])
 
@@ -325,7 +325,7 @@ def main():
         luot_chinh_thuc = st.session_state.get('luot_chinh_thuc', 0)
         thi_thu_con_thieu = st.session_state.get('thi_thu_con_thieu', 5)
 
-        # --- BẪY LỖI: KIỂM TRA F5 HOẶC RỚT MẠNG ---
+        # --- BẪY LỖI F5 ---
         if stt == "DangThi" and not st.session_state.bat_dau:
             try:
                 ws_hocvien = db.worksheet("HocVien")
@@ -335,6 +335,10 @@ def main():
                 st.warning("Bài thi đã bị hủy. Lượt thi đã bị trừ nhưng Điểm Kỷ Lục vẫn được giữ nguyên.")
             except: pass
 
+        # --- HIỂN THỊ BANNER ---
+        if not st.session_state.bat_dau:
+            st.image(BANNER_URL, use_container_width=True)
+
         # --- HEADER DASHBOARD ---
         col1, col2 = st.columns([4.2, 1.5])
         with col1:
@@ -343,7 +347,7 @@ def main():
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
                     <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">🏆 Điểm kỷ lục: <b style="color: #4ade80; font-size: 15px;">{diem_cu}/50</b></div>
-                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Thi thử: <b style="color: white;">{lan_thu}</b> lần ({thi_thu_con_thieu} lần nữa thêm lượt chính thức)</div>
+                    <div style="color: #e0e0e0; font-size: 12px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Đã thi thử: <b style="color: white;">{lan_thu}</b> lần (Cần {thi_thu_con_thieu} lần nữa)</div>
                     <div style="color: #e0e0e0; font-size: 12px; font-family: 'Montserrat', sans-serif;">Thi chính thức còn: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> </div>
                 </div>
                 """
@@ -368,7 +372,7 @@ def main():
         
         st.write("")
         
-        # --- TAB MENU MỚI ---
+        # --- TAB MENU ---
         if role == 'Admin':
             tabs = st.tabs(["📢 THÔNG TIN", "👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU", "📝 THÔNG BÁO"])
             active_tab = "Admin"
@@ -379,10 +383,8 @@ def main():
             tabs = st.tabs(["📢 THÔNG TIN", "📚 TÀI LIỆU", "📝 THI TRẮC NGHIỆM"])
             active_tab = "HV"
 
-
         # --- GIAO DIỆN CHÍNH ---
         if not st.session_state.bat_dau:
-            
             # --- TAB 1: THÔNG TIN (Dành cho tất cả) ---
             with tabs[0]:
                 col_tb, col_xh = st.columns([1, 1])
@@ -391,7 +393,7 @@ def main():
                     st.subheader("📢 THÔNG BÁO MỚI NHẤT")
                     tb_data = get_thong_bao(db)
                     if tb_data:
-                        for tb in tb_data:
+                        for tb in reversed(tb_data):
                             st.info(f"**🗓️ {tb.get('Ngay', '')} | {tb.get('TieuDe', '')}**\n\n{tb.get('NoiDung', '')}")
                     else:
                         st.write("Hiện chưa có thông báo nào từ Giảng viên.")
@@ -401,19 +403,18 @@ def main():
                     st.markdown("""
                     - **Điều kiện thi chính thức:** Hoàn thành trọn vẹn 5 bài thi thử (đạt tối thiểu **10/15 điểm**) sẽ tự động nhận được **1 lượt** thi chính thức vào Ví.
                     - **Bảo lưu Kỷ lục:** Điểm số cao nhất của bạn sẽ luôn được giữ lại. Các lần thi sau chỉ ghi đè nếu điểm cao hơn kỷ lục cũ.
-                    - **Chống gian lận (Luật F5):** Mọi hành vi tải lại trang (F5) hoặc đóng web giữa chừng trong lúc thi chính thức sẽ lập tức bị hủy bài thi và trừ 1 lượt thi.
+                    - **Chống gian lận (Luật F5):** Mọi hành vi tải lại trang (F5) hoặc đóng web giữa chừng trong lúc thi chính thức sẽ bị hủy bài thi và trừ 1 lượt thi.
                     """)
 
                 with col_xh:
                     st.subheader("🏆 BẢNG VÀNG KỶ LỤC")
-                    # Lọc danh sách học viên và xếp hạng theo Điểm Kỷ Lục (Giảm dần) -> Lần thi thật (Tăng dần)
                     hv_list = [r for r in all_hv_vals[1:] if len(r) >= 8 and r[2] == 'hocvien']
                     hv_list.sort(key=lambda x: (int(x[5]) if str(x[5]).isdigit() else 0, -int(x[7]) if str(x[7]).isdigit() else 0), reverse=True)
                     
                     rank_data = []
-                    for idx, r in enumerate(hv_list[:10]): # Lấy Top 10
+                    for idx, r in enumerate(hv_list[:10]):
                         diem_kl = int(r[5]) if str(r[5]).isdigit() else 0
-                        if diem_kl == 0: continue # Không hiện người chưa có điểm
+                        if diem_kl == 0: continue 
                         
                         rank_str = str(idx + 1)
                         if idx == 0: rank_str = "🥇 Top 1"
@@ -432,7 +433,7 @@ def main():
                     else:
                         st.write("Chưa có sĩ quan nào ghi danh lên Bảng Vàng.")
 
-            # --- CÁC TAB KHÁC ---
+            # --- CÁC TAB QUẢN LÝ ---
             if active_tab in ["Admin", "GV"]:
                 with tabs[1]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
@@ -480,15 +481,13 @@ def main():
                             with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
                                 render_mixed_content(l.get('NoiDung',''))
                     else: st.warning("Chưa có giáo trình.")
-                
-                # TAB QUẢN LÝ THÔNG BÁO CHO ADMIN/GIẢNG VIÊN
+
                 with tabs[4]:
                     st.subheader("📝 QUẢN LÝ THÔNG BÁO TRANG CHỦ")
                     try:
                         ws_tb = db.worksheet("ThongBao")
                         tb_vals = ws_tb.get_all_values()
                     except:
-                        # Tự động tạo Sheet nếu chưa có
                         ws_tb = db.add_worksheet(title="ThongBao", rows="50", cols="3")
                         ws_tb.append_row(["Ngay", "TieuDe", "NoiDung"])
                         tb_vals = ws_tb.get_all_values()
@@ -500,9 +499,11 @@ def main():
                     if st.button("LƯU THÔNG BÁO"):
                         if save_to_sheet(db, "ThongBao", tb_edit): 
                             st.success("Đã đăng thông báo thành công!")
+                            st.cache_data.clear()
                             time.sleep(1)
                             st.rerun()
 
+            # --- TAB HỌC VIÊN ---
             elif active_tab == "HV":
                 with tabs[1]: 
                     st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
@@ -519,7 +520,7 @@ def main():
                         if st.button("📝 THI THỬ (Yêu cầu >= 10đ)"):
                             all_qs = get_exams(db)[1:] 
                             if len(all_qs)>0: 
-                                qs = random.sample(all_qs, min(15, len(all_qs))) # Thi thử 15 câu
+                                qs = random.sample(all_qs, min(15, len(all_qs))) 
                             st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
                             st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
                             st.session_state.da_luu_ket_qua = False
@@ -541,12 +542,10 @@ def main():
                                         new_lan_that = lan_that + 1
                                         new_luot_chinh_thuc = luot_chinh_thuc - 1 
                                         
-                                        # Trừ Ví Lượt Thi ngay lập tức để chống spam
                                         ws_hocvien = db.worksheet("HocVien")
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 8, str(new_lan_that))   
                                         ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))   
-                                        st.cache_data.clear() 
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
@@ -581,7 +580,6 @@ def main():
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                         if st.session_state.diem_so > diem_cu:
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
-                        st.cache_data.clear() 
                     except: pass
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
@@ -598,14 +596,12 @@ def main():
                             if st.session_state.diem_so > diem_cu:
                                 ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            # CƠ CHẾ CHỐNG SPAM: CHỈ CỘNG LƯỢT KHI THI THỬ >= 10 ĐIỂM
                             if st.session_state.diem_so >= 10:
                                 new_lan_thu = lan_thu + 1
                                 ws_hocvien.update_cell(user_row_idx, 7, str(new_lan_thu))
                                 if new_lan_thu % 5 == 0:
                                     new_luot_chinh_thuc = luot_chinh_thuc + 1
                                     ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
-                        st.cache_data.clear() 
                     except: pass
                     st.session_state.da_luu_ket_qua = True
 
@@ -673,6 +669,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
