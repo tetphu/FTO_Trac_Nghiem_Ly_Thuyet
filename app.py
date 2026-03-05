@@ -300,8 +300,11 @@ def main():
         lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
         lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
         
-        # --- CƠ CHẾ MỚI: 5 LẦN THI THỬ = 1 LẦN THI CHÍNH THỨC ---
-        earned_attempts = lan_thu // 5
+        # --- CỘT 9: LƯỢT THI ĐƯỢC CẤP THÊM (CHỈNH SỬA THỦ CÔNG) ---
+        luot_thi_them = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
+        
+        # --- CƠ CHẾ: 5 LẦN THI THỬ = 1 LẦN THI CHÍNH THỨC + LƯỢT CẤP THÊM TỪ ADMIN ---
+        earned_attempts = (lan_thu // 5) + luot_thi_them
         remaining = earned_attempts - lan_that
         if remaining < 0: remaining = 0
         thi_thu_con_thieu = 5 - (lan_thu % 5)
@@ -399,7 +402,6 @@ def main():
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            # Chốt điểm cộng 1 lần thi thử thành công
                             ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1))
                         st.cache_data.clear() 
                     except: pass
@@ -464,7 +466,7 @@ def main():
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
-                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","SoLanThiThu","SoLanThiThat","DuLieuCu1","DuLieuCu2"]
+                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","SoLanThiThu","SoLanThiThat","LuotThiThem","DuLieuCu"]
                     clean_data = [r[:10]+[""]*(10-len(r)) for r in all_hv_vals[1:]] if len(all_hv_vals)>1 else []
                     full_df = pd.DataFrame(clean_data, columns=headers)
 
@@ -481,8 +483,8 @@ def main():
                             "Password": st.column_config.TextColumn("Mật Khẩu"),
                             "SoLanThiThu": st.column_config.NumberColumn("Thi thử"),
                             "SoLanThiThat": st.column_config.NumberColumn("Thi thật"),
-                            "DuLieuCu1": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True),
-                            "DuLieuCu2": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
+                            "LuotThiThem": st.column_config.NumberColumn("Lượt cấp thêm (Thủ công)"),
+                            "DuLieuCu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
                         }
                     )
                     if st.button("LƯU THAY ĐỔI", type="primary"):
@@ -567,6 +569,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
