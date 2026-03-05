@@ -179,7 +179,7 @@ def ket_noi_csdl():
     except Exception as e:
         return None
 
-# KHÔNG DÙNG CACHE CHO NGÂN HÀNG CÂU HỎI VÀ TÀI LIỆU NỮA, TRÁNH LỖI ĐỒNG BỘ
+# KHÔNG DÙNG CACHE ĐỂ LẤY DỮ LIỆU ĐỀ THI & GIÁO TRÌNH LIVE 100%
 def get_exams(_db):
     try: return _db.worksheet("CauHoi").get_all_values()
     except: return []
@@ -191,7 +191,7 @@ def get_giao_trinh(_db):
 # --- 5. HÀM XỬ LÝ DỮ LIỆU ---
 def check_login(db, u, p):
     try:
-        rows = db.worksheet("HocVien").get_all_values() 
+        rows = db.worksheet("HocVien").get_all_values()
         for r in rows[1:]:
             if len(r) < 3: continue
             if str(r[0]).strip() == str(u).strip() and str(r[1]).strip() == str(p).strip():
@@ -278,11 +278,11 @@ def main():
         inject_dashboard_css()
         role = st.session_state.vai_tro
         
-        # --- TỐI ƯU CỰC ĐỘ: CHỈ GỌI API KHI KHÔNG Ở TRONG BÀI THI ---
+        # --- TỐI ƯU CỰC ĐỘ: LẤY DỮ LIỆU LIVE KHI ĐANG Ở NGOÀI BẢNG ĐIỀU KHIỂN ---
         if not st.session_state.bat_dau:
             ws_hocvien = db.worksheet("HocVien")
             all_hv_vals = ws_hocvien.get_all_values()
-            st.session_state.all_hv_vals_cache = all_hv_vals # Lưu tạm cho Admin thao tác
+            st.session_state.all_hv_vals_cache = all_hv_vals
             
             user_row_idx = None
             user_row_data = []
@@ -296,32 +296,27 @@ def main():
             
             while len(user_row_data) < 10: user_row_data.append("")
             
-            # Lưu lại trạng thái thời gian thực vào session
             st.session_state.stt = user_row_data[4]
             st.session_state.diem_cu = int(user_row_data[5]) if str(user_row_data[5]).strip().isdigit() else 0
             st.session_state.lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
             st.session_state.lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
-            st.session_state.luot_thi_them = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
             
-            # Tính toán tự động số lượt thi còn lại THỜI GIAN THỰC
-            earned_attempts = (st.session_state.lan_thu // 5) + st.session_state.luot_thi_them
-            st.session_state.remaining = earned_attempts - st.session_state.lan_that
-            if st.session_state.remaining < 0: st.session_state.remaining = 0
+            # CỘT 9 TRỞ THÀNH "VÍ LƯỢT THI" TRỰC TIẾP
+            st.session_state.luot_chinh_thuc = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
+            
             st.session_state.thi_thu_con_thieu = 5 - (st.session_state.lan_thu % 5)
-            
-            if st.session_state.stt == "Khoa": st.session_state.remaining = 0
+            if st.session_state.stt == "Khoa": st.session_state.luot_chinh_thuc = 0
             
         else:
-            # KHI ĐANG TRONG PHÒNG THI -> Chặn đọc Google Sheet, chỉ lấy dữ liệu từ RAM
+            # Khi đang thi thì ngắt kết nối đọc sheet để web chạy mượt 100%
             user_row_idx = st.session_state.get('user_row_idx')
             all_hv_vals = st.session_state.get('all_hv_vals_cache', [])
 
-        # Biến gán ngắn gọn để dùng bên dưới
         stt = st.session_state.get('stt', 'ChuaDuocThi')
         diem_cu = st.session_state.get('diem_cu', 0)
         lan_thu = st.session_state.get('lan_thu', 0)
         lan_that = st.session_state.get('lan_that', 0)
-        remaining = st.session_state.get('remaining', 0)
+        luot_chinh_thuc = st.session_state.get('luot_chinh_thuc', 0)
         thi_thu_con_thieu = st.session_state.get('thi_thu_con_thieu', 5)
 
         # --- BẪY LỖI: KIỂM TRA F5 HOẶC RỚT MẠNG ---
@@ -342,7 +337,7 @@ def main():
                 stats_html = f"""
                 <div style="background-color: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; text-align: right; margin-left: auto;">
                     <div style="color: #e0e0e0; font-size: 13px; margin-bottom: 3px; font-family: 'Montserrat', sans-serif;">Đã hoàn thành Thi thử: <b style="color: white;">{lan_thu}</b> lần</div>
-                    <div style="color: #e0e0e0; font-size: 13px; font-family: 'Montserrat', sans-serif;">Lượt Thi chính thức: <b style="color: #fccc04;">{remaining} lượt</b> (Cần {thi_thu_con_thieu} thi thử nữa)</div>
+                    <div style="color: #e0e0e0; font-size: 13px; font-family: 'Montserrat', sans-serif;">Lượt Thi hiện có: <b style="color: #fccc04;">{luot_chinh_thuc} lượt</b> (Cần {thi_thu_con_thieu} thi thử nữa)</div>
                 </div>
                 """
                 
@@ -410,10 +405,17 @@ def main():
                     try:
                         ws_hocvien = db.worksheet("HocVien")
                         if st.session_state.get('mode') == 'that':
+                            # Chốt điểm thi thật
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            ws_hocvien.update_cell(user_row_idx, 7, str(lan_thu + 1))
+                            # CƠ CHẾ NẠP VÍ TỰ ĐỘNG KHI HOÀN THÀNH THI THỬ
+                            new_lan_thu = lan_thu + 1
+                            ws_hocvien.update_cell(user_row_idx, 7, str(new_lan_thu))
+                            if new_lan_thu % 5 == 0:
+                                new_luot_chinh_thuc = luot_chinh_thuc + 1
+                                ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
+                                st.info("🎉 Tích lũy đủ 5 lần thi thử! Hệ thống đã thưởng cho bạn 1 Lượt Thi Chính Thức!")
                     except: pass
                     st.session_state.da_luu_ket_qua = True
 
@@ -428,7 +430,7 @@ def main():
                 else:
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
-                    st.info("💡 Bạn vừa hoàn thành 1 bài thi thử! Số lượt hoàn thành đã được cộng vào hệ thống.")
+                    st.success("💡 Bạn vừa hoàn thành 1 bài thi thử! Số lượt hoàn thành đã được lưu vào hệ thống.")
 
                 if st.button("🏠 QUAY VỀ BẢNG ĐIỀU KHIỂN"):
                     st.session_state.bat_dau = False
@@ -476,7 +478,7 @@ def main():
             if active_tab in ["Admin", "GV"]:
                 with tabs[0]:
                     st.subheader("✅ DANH SÁCH HỌC VIÊN")
-                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","SoLanThiThu","SoLanThiThat","LuotThiThem","DuLieuCu"]
+                    headers = ["Username","Password","Role","HoTen","TrangThai","Diem","SoLanThiThu","SoLanThiThat","LuotThiChinhThuc","DuLieuCu"]
                     clean_data = [r[:10]+[""]*(10-len(r)) for r in all_hv_vals[1:]] if len(all_hv_vals)>1 else []
                     full_df = pd.DataFrame(clean_data, columns=headers)
 
@@ -493,7 +495,7 @@ def main():
                             "Password": st.column_config.TextColumn("Mật Khẩu"),
                             "SoLanThiThu": st.column_config.NumberColumn("Thi thử"),
                             "SoLanThiThat": st.column_config.NumberColumn("Thi thật"),
-                            "LuotThiThem": st.column_config.NumberColumn("Lượt cấp thêm (Thủ công)"),
+                            "LuotThiChinhThuc": st.column_config.NumberColumn("Lượt thi hiện có"),
                             "DuLieuCu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
                         }
                     )
@@ -550,19 +552,21 @@ def main():
                                     st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
                                 elif stt == "Khoa":
                                     st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
-                                elif remaining <= 0:
+                                elif luot_chinh_thuc <= 0:
                                     st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử nữa hoặc nhờ Giảng viên cấp thêm lượt!")
                                 else:
-                                    # CHỈ CẦN CÒN LƯỢT THÌ ĐƯỢC THI
+                                    # CHỈ CẦN VÍ CÒN LƯỢT THÌ ĐƯỢC THI (Bỏ qua việc xét Trạng thái)
                                     if len(all_qs) > 0: 
                                         qs = random.sample(all_qs, min(50, len(all_qs)))
-                                        lan_that += 1
+                                        new_lan_that = lan_that + 1
+                                        new_luot_chinh_thuc = luot_chinh_thuc - 1 # Trừ tiền trong ví
                                         
-                                        # Ghi điểm = 0 ngay từ đầu để chống F5
+                                        # Ghi điểm = 0 ngay từ đầu, cập nhật lại Ví tiền
                                         ws_hocvien = db.worksheet("HocVien")
                                         ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
                                         ws_hocvien.update_cell(user_row_idx, 6, "0") 
-                                        ws_hocvien.update_cell(user_row_idx, 8, str(lan_that))   
+                                        ws_hocvien.update_cell(user_row_idx, 8, str(new_lan_that))   
+                                        ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))   
                                         
                                         st.session_state.bat_dau = True
                                         st.session_state.ds_cau_hoi = qs
