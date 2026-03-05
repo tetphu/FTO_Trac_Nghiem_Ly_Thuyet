@@ -166,7 +166,7 @@ def inject_dashboard_css():
     """, unsafe_allow_html=True)
 
 
-# --- 4. KẾT NỐI DATABASE ---
+# --- 4. KẾT NỐI DATABASE & CACHE TỐI ƯU ---
 @st.cache_resource
 def ket_noi_csdl():
     try:
@@ -178,6 +178,14 @@ def ket_noi_csdl():
         return gspread.authorize(creds).open("HeThongTracNghiem")
     except Exception as e:
         return None
+
+# CACHE ĐỌC THÔNG BÁO TỪ GOOGLE SHEET
+@st.cache_data(ttl=120)
+def get_thong_bao(_db):
+    try: 
+        return _db.worksheet("ThongBao").get_all_records()
+    except: 
+        return []
 
 def get_exams(_db):
     try: return _db.worksheet("CauHoi").get_all_values()
@@ -205,6 +213,7 @@ def save_to_sheet(db, sheet_name, df_to_save):
         ws.clear()
         data = [df_to_save.columns.tolist()] + df_to_save.values.tolist()
         ws.update(data)
+        st.cache_data.clear() 
         return True
     except Exception as e:
         st.error(f"Lỗi lưu: {e}")
@@ -296,19 +305,16 @@ def main():
             while len(user_row_data) < 10: user_row_data.append("")
             
             st.session_state.stt = user_row_data[4]
-            # ĐIỂM CŨ BÂY GIỜ LÀ ĐIỂM KỶ LỤC
             st.session_state.diem_cu = int(user_row_data[5]) if str(user_row_data[5]).strip().isdigit() else 0
             st.session_state.lan_thu = int(user_row_data[6]) if str(user_row_data[6]).strip().isdigit() else 0
             st.session_state.lan_that = int(user_row_data[7]) if str(user_row_data[7]).strip().isdigit() else 0
-            
-            # CỘT 9 TRỞ THÀNH "VÍ LƯỢT THI" TRỰC TIẾP
             st.session_state.luot_chinh_thuc = int(user_row_data[8]) if str(user_row_data[8]).strip().isdigit() else 0
             
             st.session_state.thi_thu_con_thieu = 5 - (st.session_state.lan_thu % 5)
             if st.session_state.stt == "Khoa": st.session_state.luot_chinh_thuc = 0
             
         else:
-            # Khi đang thi thì ngắt kết nối đọc sheet để web chạy mượt 100%
+            # Khi đang thi ngắt kết nối để mượt 100%
             user_row_idx = st.session_state.get('user_row_idx')
             all_hv_vals = st.session_state.get('all_hv_vals_cache', [])
 
@@ -324,13 +330,12 @@ def main():
             try:
                 ws_hocvien = db.worksheet("HocVien")
                 ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                # LƯU Ý: KHÔNG GHI ĐIỂM = 0 NỮA ĐỂ BẢO TOÀN ĐIỂM KỶ LỤC
                 st.session_state.stt = "DaThi" 
                 st.error("🚨 HỆ THỐNG PHÁT HIỆN BẠN ĐÃ TẢI LẠI TRANG (F5) HOẶC THOÁT RA ĐỘT NGỘT!")
-                st.warning("Bài thi đã bị hủy. Lượt thi của bạn đã bị trừ nhưng Điểm Kỷ Lục cao nhất vẫn được giữ nguyên.")
+                st.warning("Bài thi đã bị hủy. Lượt thi đã bị trừ nhưng Điểm Kỷ Lục vẫn được giữ nguyên.")
             except: pass
 
-        # --- HEADER DASHBOARD (HIỂN THỊ ĐIỂM KỶ LỤC) ---
+        # --- HEADER DASHBOARD ---
         col1, col2 = st.columns([4.2, 1.5])
         with col1:
             stats_html = ""
@@ -363,33 +368,217 @@ def main():
         
         st.write("")
         
-        # --- TAB MENU ---
+        # --- TAB MENU MỚI ---
         if role == 'Admin':
-            tabs = st.tabs(["👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
+            tabs = st.tabs(["📢 THÔNG TIN", "👥 USER", "⚙️ CÂU HỎI", "📚 TÀI LIỆU", "📝 THÔNG BÁO"])
             active_tab = "Admin"
         elif role == 'GiangVien':
-            tabs = st.tabs(["👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 TÀI LIỆU"])
+            tabs = st.tabs(["📢 THÔNG TIN", "👥 CẤP QUYỀN", "⚙️ CÂU HỎI", "📚 TÀI LIỆU", "📝 THÔNG BÁO"])
             active_tab = "GV"
         else:
-            tabs = st.tabs(["📚 TÀI LIỆU", "📝 THI TRẮC NGHIỆM"])
+            tabs = st.tabs(["📢 THÔNG TIN", "📚 TÀI LIỆU", "📝 THI TRẮC NGHIỆM"])
             active_tab = "HV"
 
-        # --- LOGIC THI CỬ ---
+
+        # --- GIAO DIỆN CHÍNH ---
+        if not st.session_state.bat_dau:
+            
+            # --- TAB 1: THÔNG TIN (Dành cho tất cả) ---
+            with tabs[0]:
+                col_tb, col_xh = st.columns([1, 1])
+                
+                with col_tb:
+                    st.subheader("📢 THÔNG BÁO MỚI NHẤT")
+                    tb_data = get_thong_bao(db)
+                    if tb_data:
+                        for tb in tb_data:
+                            st.info(f"**🗓️ {tb.get('Ngay', '')} | {tb.get('TieuDe', '')}**\n\n{tb.get('NoiDung', '')}")
+                    else:
+                        st.write("Hiện chưa có thông báo nào từ Giảng viên.")
+                        
+                    st.markdown("---")
+                    st.subheader("📌 QUY CHẾ THI FTO")
+                    st.markdown("""
+                    - **Điều kiện thi chính thức:** Hoàn thành trọn vẹn 5 bài thi thử (đạt tối thiểu **10/15 điểm**) sẽ tự động nhận được **1 lượt** thi chính thức vào Ví.
+                    - **Bảo lưu Kỷ lục:** Điểm số cao nhất của bạn sẽ luôn được giữ lại. Các lần thi sau chỉ ghi đè nếu điểm cao hơn kỷ lục cũ.
+                    - **Chống gian lận (Luật F5):** Mọi hành vi tải lại trang (F5) hoặc đóng web giữa chừng trong lúc thi chính thức sẽ lập tức bị hủy bài thi và trừ 1 lượt thi.
+                    """)
+
+                with col_xh:
+                    st.subheader("🏆 BẢNG VÀNG KỶ LỤC")
+                    # Lọc danh sách học viên và xếp hạng theo Điểm Kỷ Lục (Giảm dần) -> Lần thi thật (Tăng dần)
+                    hv_list = [r for r in all_hv_vals[1:] if len(r) >= 8 and r[2] == 'hocvien']
+                    hv_list.sort(key=lambda x: (int(x[5]) if str(x[5]).isdigit() else 0, -int(x[7]) if str(x[7]).isdigit() else 0), reverse=True)
+                    
+                    rank_data = []
+                    for idx, r in enumerate(hv_list[:10]): # Lấy Top 10
+                        diem_kl = int(r[5]) if str(r[5]).isdigit() else 0
+                        if diem_kl == 0: continue # Không hiện người chưa có điểm
+                        
+                        rank_str = str(idx + 1)
+                        if idx == 0: rank_str = "🥇 Top 1"
+                        elif idx == 1: rank_str = "🥈 Top 2"
+                        elif idx == 2: rank_str = "🥉 Top 3"
+                        
+                        rank_data.append({
+                            "Xếp Hạng": rank_str, 
+                            "Sĩ Quan": r[3], 
+                            "Điểm Kỷ Lục": f"{diem_kl}/50", 
+                            "Đã Thi": f"{r[7]} lần"
+                        })
+                    
+                    if rank_data:
+                        st.dataframe(pd.DataFrame(rank_data), use_container_width=True, hide_index=True)
+                    else:
+                        st.write("Chưa có sĩ quan nào ghi danh lên Bảng Vàng.")
+
+            # --- CÁC TAB KHÁC ---
+            if active_tab in ["Admin", "GV"]:
+                with tabs[1]:
+                    st.subheader("✅ DANH SÁCH HỌC VIÊN")
+                    headers = ["Username","Password","Role","HoTen","TrangThai","DiemKyLuc","SoLanThiThu","SoLanThiThat","LuotThiChinhThuc","DuLieuCu"]
+                    clean_data = [r[:10]+[""]*(10-len(r)) for r in all_hv_vals[1:]] if len(all_hv_vals)>1 else []
+                    full_df = pd.DataFrame(clean_data, columns=headers)
+
+                    if role == 'Admin':
+                        view_df = full_df; role_ops = ["hocvien", "GiangVien", "Admin"]
+                    else:
+                        view_df = full_df[full_df['Role'] == 'hocvien']; role_ops = ["hocvien"]
+
+                    edited = st.data_editor(
+                        view_df, use_container_width=True, num_rows="dynamic", hide_index=True,
+                        column_config={
+                            "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
+                            "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
+                            "Password": st.column_config.TextColumn("Mật Khẩu"),
+                            "DiemKyLuc": st.column_config.NumberColumn("Điểm Kỷ Lục"),
+                            "SoLanThiThu": st.column_config.NumberColumn("Thi thử (>=10đ)"),
+                            "SoLanThiThat": st.column_config.NumberColumn("Đã thi thật"),
+                            "LuotThiChinhThuc": st.column_config.NumberColumn("Ví Lượt Thi"),
+                            "DuLieuCu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
+                        }
+                    )
+                    if st.button("LƯU THAY ĐỔI", type="primary"):
+                        final_df = edited if role == 'Admin' else pd.concat([full_df[full_df['Role'] != 'hocvien'], edited], ignore_index=True)
+                        if save_to_sheet(db, "HocVien", final_df): st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
+
+                with tabs[2]:
+                    st.subheader("⚙️ NGÂN HÀNG CÂU HỎI TRẮC NGHIỆM")
+                    q_vals = get_exams(db)
+                    q_headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
+                    q_data = [r[:7]+[""]*(7-len(r)) for r in q_vals[1:]] if len(q_vals)>1 else []
+                    q_df = pd.DataFrame(q_data, columns=q_headers)
+                    q_edit = st.data_editor(q_df, num_rows="dynamic", use_container_width=True)
+                    if st.button("LƯU CÂU HỎI"):
+                        if save_to_sheet(db, "CauHoi", q_edit): st.success("Đã lưu!"); time.sleep(1); st.rerun()
+
+                with tabs[3]:
+                    st.subheader("📚 TÀI LIỆU FTO GCPD")
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
+                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                                render_mixed_content(l.get('NoiDung',''))
+                    else: st.warning("Chưa có giáo trình.")
+                
+                # TAB QUẢN LÝ THÔNG BÁO CHO ADMIN/GIẢNG VIÊN
+                with tabs[4]:
+                    st.subheader("📝 QUẢN LÝ THÔNG BÁO TRANG CHỦ")
+                    try:
+                        ws_tb = db.worksheet("ThongBao")
+                        tb_vals = ws_tb.get_all_values()
+                    except:
+                        # Tự động tạo Sheet nếu chưa có
+                        ws_tb = db.add_worksheet(title="ThongBao", rows="50", cols="3")
+                        ws_tb.append_row(["Ngay", "TieuDe", "NoiDung"])
+                        tb_vals = ws_tb.get_all_values()
+                        
+                    tb_headers = ["Ngay", "TieuDe", "NoiDung"]
+                    tb_data = [r[:3]+[""]*(3-len(r)) for r in tb_vals[1:]] if len(tb_vals) > 1 else []
+                    tb_df = pd.DataFrame(tb_data, columns=tb_headers)
+                    tb_edit = st.data_editor(tb_df, num_rows="dynamic", use_container_width=True)
+                    if st.button("LƯU THÔNG BÁO"):
+                        if save_to_sheet(db, "ThongBao", tb_edit): 
+                            st.success("Đã đăng thông báo thành công!")
+                            time.sleep(1)
+                            st.rerun()
+
+            elif active_tab == "HV":
+                with tabs[1]: 
+                    st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
+                    data = get_giao_trinh(db)
+                    if data:
+                        for l in data:
+                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
+                                render_mixed_content(l.get('NoiDung',''))
+                    else: st.warning("Chưa có dữ liệu.")
+
+                with tabs[2]:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("📝 THI THỬ (Yêu cầu >= 10đ)"):
+                            all_qs = get_exams(db)[1:] 
+                            if len(all_qs)>0: 
+                                qs = random.sample(all_qs, min(15, len(all_qs))) # Thi thử 15 câu
+                            st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
+                            st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
+                            st.session_state.da_luu_ket_qua = False
+                            st.rerun()
+                    with c2:
+                        if st.button("🚨 BẮT ĐẦU THI CHÍNH THỨC"):
+                            try:
+                                all_qs = get_exams(db)[1:]
+
+                                if stt == "DaThi" and diem_cu >= 45:
+                                    st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
+                                elif stt == "Khoa":
+                                    st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
+                                elif luot_chinh_thuc <= 0:
+                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử (>=10 điểm) nữa hoặc nhờ Giảng viên nạp thêm lượt!")
+                                else:
+                                    if len(all_qs) > 0: 
+                                        qs = random.sample(all_qs, min(50, len(all_qs)))
+                                        new_lan_that = lan_that + 1
+                                        new_luot_chinh_thuc = luot_chinh_thuc - 1 
+                                        
+                                        # Trừ Ví Lượt Thi ngay lập tức để chống spam
+                                        ws_hocvien = db.worksheet("HocVien")
+                                        ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
+                                        ws_hocvien.update_cell(user_row_idx, 8, str(new_lan_that))   
+                                        ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))   
+                                        st.cache_data.clear() 
+                                        
+                                        st.session_state.bat_dau = True
+                                        st.session_state.ds_cau_hoi = qs
+                                        st.session_state.chi_so = 0
+                                        st.session_state.diem_so = 0
+                                        st.session_state.mode = 'that'
+                                        st.session_state.da_luu_ket_qua = False
+                                        st.rerun()
+                                    else: st.error("Ngân hàng câu hỏi đang trống!")
+                            except Exception as e: 
+                                st.error(f"Lỗi: {str(e)}")
+
+        # ==========================================
+        # --- MÀN HÌNH ĐANG TRONG PHÒNG THI ---
+        # ==========================================
         if st.session_state.bat_dau:
+            qs = st.session_state.ds_cau_hoi
+            idx = st.session_state.chi_so
+            
             if st.session_state.mode == 'thu':
-                st.info("📝 THI THỬ")
+                st.info("📝 ĐANG THI THỬ")
                 if st.button("❌ DỪNG LÀM BÀI", key="stop_exam"):
                     st.session_state.bat_dau = False
                     st.session_state.ds_cau_hoi = []
                     st.session_state.da_luu_ket_qua = False
                     st.rerun()
             else:
-                st.error("🚨 THI CHÍNH THỨC (CẤM TẢI LẠI TRANG)")
+                st.error("🚨 ĐANG THI CHÍNH THỨC (CẤM TẢI LẠI TRANG)")
                 if st.button("🏳️ KHÓ QUÁ BỎ KHÔNG THI NỮA", key="give_up_exam"):
                     try:
                         ws_hocvien = db.worksheet("HocVien")
                         ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                        # NẾU BỎ THI MÀ ĐIỂM CAO HƠN KỶ LỤC CŨ THÌ VẪN GHI ĐÈ LÊN
                         if st.session_state.diem_so > diem_cu:
                             ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         st.cache_data.clear() 
@@ -399,30 +588,23 @@ def main():
                     st.session_state.da_luu_ket_qua = False
                     st.rerun()
 
-            qs = st.session_state.ds_cau_hoi
-            idx = st.session_state.chi_so
-            
-            # ==========================================
-            # --- KHI HOÀN THÀNH BÀI THI (TỰ ĐỘNG CHỐT) ---
-            # ==========================================
+            # --- KHI HOÀN THÀNH BÀI THI ---
             if idx >= len(qs):
                 if not st.session_state.get('da_luu_ket_qua', False):
                     try:
                         ws_hocvien = db.worksheet("HocVien")
                         if st.session_state.get('mode') == 'that':
                             ws_hocvien.update_cell(user_row_idx, 5, "DaThi")
-                            # LƯU ĐIỂM KỶ LỤC: CHỈ GHI ĐÈ NẾU ĐIỂM MỚI > ĐIỂM CŨ
                             if st.session_state.diem_so > diem_cu:
                                 ws_hocvien.update_cell(user_row_idx, 6, str(st.session_state.diem_so))
                         else:
-                            # CƠ CHẾ CHỐNG SPAM: CHỈ CỘNG NẾU THI THỬ >= 10 ĐIỂM
+                            # CƠ CHẾ CHỐNG SPAM: CHỈ CỘNG LƯỢT KHI THI THỬ >= 10 ĐIỂM
                             if st.session_state.diem_so >= 10:
                                 new_lan_thu = lan_thu + 1
                                 ws_hocvien.update_cell(user_row_idx, 7, str(new_lan_thu))
                                 if new_lan_thu % 5 == 0:
                                     new_luot_chinh_thuc = luot_chinh_thuc + 1
                                     ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))
-                                    st.info("🎉 Tích lũy đủ 5 lần thi thử hợp lệ! Hệ thống đã thưởng cho bạn 1 Lượt Thi Chính Thức!")
                         st.cache_data.clear() 
                     except: pass
                     st.session_state.da_luu_ket_qua = True
@@ -434,20 +616,18 @@ def main():
                         st.success("🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA KÌ THI CHÍNH THỨC!")
                     else:
                         st.error(f"KẾT QUẢ: {st.session_state.diem_so}/{len(qs)}")
-                        st.warning("❌ Bạn chưa vượt qua kỳ thi này.")
+                        st.warning("❌ Bạn đã rớt kỳ thi này.")
                         
-                    # Hiện chúc mừng nếu phá kỷ lục
                     if st.session_state.diem_so > diem_cu:
                         st.success("🏆 CHÚC MỪNG! BẠN ĐÃ PHÁ KỶ LỤC ĐIỂM SỐ CỦA CHÍNH MÌNH!")
                 else:
                     st.balloons()
                     st.success(f"KẾT QUẢ THI THỬ: {st.session_state.diem_so}/{len(qs)}")
                     
-                    # Hiện thông báo tương ứng với số điểm chống spam
                     if st.session_state.diem_so >= 10:
                         st.success("💡 Tuyệt vời! Điểm của bạn >= 10. Hệ thống đã cộng cho bạn 1 lượt hoàn thành thi thử hợp lệ.")
                     else:
-                        st.warning("⚠️ Rất tiếc, bạn cần đạt tối thiểu 10/15 điểm để được tính là 1 lần hoàn thành thi thử hợp lệ. Hãy ôn tập kỹ hơn nhé!")
+                        st.warning("⚠️ Rất tiếc, bạn cần đạt tối thiểu 10/15 điểm để được tính là 1 lần hoàn thành thi thử hợp lệ. Lần thi này sẽ không được cộng dồn.")
 
                 if st.button("🏠 QUAY VỀ BẢNG ĐIỀU KHIỂN"):
                     st.session_state.bat_dau = False
@@ -456,7 +636,7 @@ def main():
                     st.rerun()
                 st.stop()
 
-            # --- RENDER CÂU HỎI HIỆN TẠI ---
+            # --- GIAO DIỆN LÀM BÀI ---
             q = qs[idx]
             while len(q)<7: q.append("")
             
@@ -490,112 +670,6 @@ def main():
                     if res == true: st.session_state.diem_so += 1
                     st.session_state.chi_so += 1
                     st.session_state.da_nop = False; st.session_state.time_end = None; st.rerun()
-
-        else:
-            if active_tab in ["Admin", "GV"]:
-                with tabs[0]:
-                    st.subheader("✅ DANH SÁCH HỌC VIÊN")
-                    headers = ["Username","Password","Role","HoTen","TrangThai","DiemKyLuc","SoLanThiThu","SoLanThiThat","LuotThiChinhThuc","DuLieuCu"]
-                    clean_data = [r[:10]+[""]*(10-len(r)) for r in all_hv_vals[1:]] if len(all_hv_vals)>1 else []
-                    full_df = pd.DataFrame(clean_data, columns=headers)
-
-                    if role == 'Admin':
-                        view_df = full_df; role_ops = ["hocvien", "GiangVien", "Admin"]
-                    else:
-                        view_df = full_df[full_df['Role'] == 'hocvien']; role_ops = ["hocvien"]
-
-                    edited = st.data_editor(
-                        view_df, use_container_width=True, num_rows="dynamic", hide_index=True,
-                        column_config={
-                            "TrangThai": st.column_config.SelectboxColumn("Trạng Thái", options=["ChuaDuocThi","DuocThi","DangThi","DaThi","Khoa"], required=True),
-                            "Role": st.column_config.SelectboxColumn("Vai Trò", options=role_ops, required=True),
-                            "Password": st.column_config.TextColumn("Mật Khẩu"),
-                            "DiemKyLuc": st.column_config.NumberColumn("Điểm kỷ lục"),
-                            "SoLanThiThu": st.column_config.NumberColumn("Thi thử (>=10đ)"),
-                            "SoLanThiThat": st.column_config.NumberColumn("Đã thi thật"),
-                            "LuotThiChinhThuc": st.column_config.NumberColumn("Ví Lượt thi (Cộng/Trừ)"),
-                            "DuLieuCu": st.column_config.TextColumn("Không dùng (Ẩn)", disabled=True)
-                        }
-                    )
-                    if st.button("LƯU THAY ĐỔI", type="primary"):
-                        final_df = edited if role == 'Admin' else pd.concat([full_df[full_df['Role'] != 'hocvien'], edited], ignore_index=True)
-                        if save_to_sheet(db, "HocVien", final_df): st.success("✅ Đã cập nhật!"); time.sleep(1); st.rerun()
-
-                with tabs[1]:
-                    st.subheader("⚙️ NGÂN HÀNG CÂU HỎI TRẮC NGHIỆM")
-                    q_vals = get_exams(db)
-                    q_headers = ["CauHoi","A","B","C","D","DapAn_Dung","GiaiThich"]
-                    q_data = [r[:7]+[""]*(7-len(r)) for r in q_vals[1:]] if len(q_vals)>1 else []
-                    q_df = pd.DataFrame(q_data, columns=q_headers)
-                    q_edit = st.data_editor(q_df, num_rows="dynamic", use_container_width=True)
-                    if st.button("LƯU CÂU HỎI"):
-                        if save_to_sheet(db, "CauHoi", q_edit): st.success("Đã lưu!"); time.sleep(1); st.rerun()
-
-                with tabs[2]:
-                    st.subheader("📚 TÀI LIỆU FTO GCPD")
-                    data = get_giao_trinh(db)
-                    if data:
-                        for l in data:
-                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                                render_mixed_content(l.get('NoiDung',''))
-                    else: st.warning("Chưa có giáo trình.")
-
-            elif active_tab == "HV":
-                with tabs[0]: 
-                    st.subheader("📚 TÀI LIỆU ÔN TẬP FTO GCPD")
-                    data = get_giao_trinh(db)
-                    if data:
-                        for l in data:
-                            with st.expander(f"📖 {l.get('BaiHoc','Bài học')}"):
-                                render_mixed_content(l.get('NoiDung',''))
-                    else: st.warning("Chưa có dữ liệu.")
-
-                with tabs[1]:
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("📝 THI THỬ"):
-                            all_qs = get_exams(db)[1:] 
-                            if len(all_qs)>0: 
-                                qs = random.sample(all_qs, min(15, len(all_qs))) # Thi thử 15 câu
-                            st.session_state.bat_dau = True; st.session_state.ds_cau_hoi = qs
-                            st.session_state.chi_so = 0; st.session_state.diem_so = 0; st.session_state.mode = 'thu'
-                            st.session_state.da_luu_ket_qua = False
-                            st.rerun()
-                    with c2:
-                        if st.button("🚨 BẮT ĐẦU THI CHÍNH THỨC"):
-                            try:
-                                all_qs = get_exams(db)[1:]
-
-                                if stt == "DaThi" and diem_cu >= 45:
-                                    st.success("🎉 Bạn đã THI ĐỖ kỳ thi này rồi, không cần thi lại nữa!")
-                                elif stt == "Khoa":
-                                    st.error("⛔ Tài khoản của bạn đang bị KHÓA.")
-                                elif luot_chinh_thuc <= 0:
-                                    st.error(f"⛔ Bạn đã hết lượt thi. Hãy hoàn thành thêm {thi_thu_con_thieu} bài thi thử (>=10 điểm) nữa hoặc nhờ Giảng viên nạp thêm lượt!")
-                                else:
-                                    # CHỈ CẦN VÍ CÒN LƯỢT THÌ ĐƯỢC THI
-                                    if len(all_qs) > 0: 
-                                        qs = random.sample(all_qs, min(50, len(all_qs)))
-                                        new_lan_that = lan_that + 1
-                                        new_luot_chinh_thuc = luot_chinh_thuc - 1 # Trừ tiền trong ví
-                                        
-                                        # BỎ DÒNG ĐẶT ĐIỂM = 0 Ở ĐÂY ĐỂ BẢO TOÀN ĐIỂM KỶ LỤC CŨ
-                                        ws_hocvien = db.worksheet("HocVien")
-                                        ws_hocvien.update_cell(user_row_idx, 5, "DangThi")
-                                        ws_hocvien.update_cell(user_row_idx, 8, str(new_lan_that))   
-                                        ws_hocvien.update_cell(user_row_idx, 9, str(new_luot_chinh_thuc))   
-                                        st.cache_data.clear() 
-                                        
-                                        st.session_state.bat_dau = True
-                                        st.session_state.ds_cau_hoi = qs
-                                        st.session_state.chi_so = 0
-                                        st.session_state.diem_so = 0
-                                        st.session_state.mode = 'that'
-                                        st.session_state.da_luu_ket_qua = False
-                                        st.rerun()
-                                    else: st.error("Ngân hàng câu hỏi đang trống!")
-                            except Exception as e: 
-                                st.error(f"Lỗi: {str(e)}")
 
 if __name__ == "__main__":
     main()
