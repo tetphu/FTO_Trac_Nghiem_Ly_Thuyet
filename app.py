@@ -19,7 +19,7 @@ except ImportError:
     st.error("Lỗi thư viện. Hãy kiểm tra requirements.txt")
     st.stop()
 
-THOI_GIAN_THI = 40
+THOI_GIAN_THI = 25
 # LINK BANNER (BẠN THAY LINK ẢNH CỦA BẠN VÀO ĐÂY)
 BANNER_URL = "https://raw.githubusercontent.com/tetphu/FTO_Trac_Nghiem_Ly_Thuyet/refs/heads/main/Anh/banner.png"
 
